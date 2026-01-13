@@ -14,6 +14,11 @@ export interface Env {
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
+    console.log('=== Root fetch handler ===');
+    console.log('Request URL:', request.url);
+    console.log('Request method:', request.method);
+    console.log('Request pathname:', new URL(request.url).pathname);
+    
     // Routed addressing
     // Automatically routes HTTP requests and/or WebSocket connections to /agents/:agent/:name
     // Best for: connecting React apps directly to Agents using useAgent from agents/react
