@@ -1,7 +1,7 @@
 import { Agent } from "agents";
-
 import { runWithTools } from "@cloudflare/ai-utils";
 import { systemPromptDM } from "./system_prompt";
+import { logger } from "./logger";
 
 
 interface Env {
@@ -68,12 +68,9 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
     async onRequest(request: Request): Promise<Response> {
         // Handle GET requests for fetching tasks
         if (request.method === 'GET') {
-            console.log('=== GET REQUEST FOR TASKS ===');
             const currentState = await this.state;
-            console.log(`Current state has ${currentState.tasks.length} task(s)`);
-            if (currentState.tasks.length > 0) {
-                console.log('Tasks in state:', currentState.tasks.map(t => ({ id: t.id, name: t.name })));
-            }
+            logger.request('GET', '/tasks', { taskCount: currentState.tasks.length });
+            
             const tasks = currentState.tasks.map(task => ({
                 id: task.id,
                 name: task.name,
@@ -83,7 +80,6 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
                 XP: task.XP
             }));
             
-            console.log(`Returning ${tasks.length} task(s) in GET response`);
             return new Response(JSON.stringify({ tasks }), {
                 headers: {
                     'Content-Type': 'application/json',
@@ -94,11 +90,10 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
 
         // Handle POST requests for chat messages
         this.createdTasksThisMessage = [];
-        console.log('=== STARTING POST REQUEST ===');
-        console.log('createdTasksThisMessage reset, current count:', this.createdTasksThisMessage.length);
+        logger.request('POST', '/chat');
 
         const userContent = await request.text();
-        console.log('User content:', userContent);
+        logger.debug('User content:', userContent);
 
         const answer = await runWithTools(
             this.env.AI,
@@ -114,11 +109,7 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
             {streamFinalResponse: true},
           );
         
-        console.log('=== RUNWITHTOOLS COMPLETE ===');
-        console.log('Tasks created during runWithTools:', this.createdTasksThisMessage.length);
-        if (this.createdTasksThisMessage.length > 0) {
-            console.log('Created tasks details:', this.createdTasksThisMessage.map(t => ({ id: t.id, name: t.name })));
-        }
+        logger.taskOperation('created during runWithTools', this.createdTasksThisMessage.length);
 
         // Wrap the stream to append task metadata after streaming completes
         let baseStream: ReadableStream<Uint8Array> | null = null;
@@ -157,25 +148,14 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
                     await new Promise(resolve => setTimeout(resolve, 500));
                     
                     // After streaming completes, check for tasks created during this message
-                    // Use agentInstance to access the tasks created during this message
                     const tasksCreated = agentInstance.createdTasksThisMessage;
-                    console.log(`=== CHECKING FOR CREATED TASKS AFTER STREAM ===`);
-                    console.log(`Tasks created count: ${tasksCreated.length}`);
-                    console.log(`Agent instance tasks count: ${agentInstance.createdTasksThisMessage.length}`);
-                    
-                    // Also verify state has the tasks
                     const currentState = await agentInstance.state;
-                    console.log(`Tasks in persisted state: ${currentState.tasks.length}`);
-                    if (currentState.tasks.length > 0) {
-                        console.log('State tasks:', currentState.tasks.map(t => ({ id: t.id, name: t.name })));
-                    }
                     
                     // If createdTasksThisMessage is empty but state has new tasks, use state tasks instead
                     const tasksToSend = tasksCreated.length > 0 ? tasksCreated : currentState.tasks;
-                    console.log(`Tasks to send in metadata: ${tasksToSend.length}`);
                     
                     if (tasksToSend.length > 0) {
-                        console.log(`Sending ${tasksToSend.length} task(s) metadata after stream`);
+                        logger.taskOperation('sending metadata', tasksToSend.length);
                         const serializedTasks = tasksToSend.map((task: Task) => ({
                             id: task.id,
                             name: task.name,
@@ -185,24 +165,19 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
                             XP: task.XP
                         }));
                         
-                        console.log('Serialized tasks:', JSON.stringify(serializedTasks, null, 2));
-                        
                         // Send metadata as SSE formatted data
                         const metadataJson = JSON.stringify({
                             type: "metadata",
                             tasks: serializedTasks
                         });
                         controller.enqueue(encoder.encode(`data: ${metadataJson}\n\n`));
-                        console.log('=== METADATA SENT TO STREAM ===');
-                    } else {
-                        console.log('No tasks to send in metadata');
                     }
                     
                     // Send done marker
                     controller.enqueue(encoder.encode('data: [DONE]\n\n'));
                     controller.close();
                 } catch (error) {
-                    console.error('Error in stream:', error);
+                    logger.error('Error in stream:', error);
                     controller.error(error);
                 }
             }
@@ -218,8 +193,7 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
     }
 
     async createTask(params: any) {
-        console.log('=== TOOL CALL: createTask ===');
-        console.log('Parameters received (raw):', JSON.stringify(params, null, 2));
+        logger.toolCall('createTask', params);
         
         // runWithTools passes parameters as an object, but the model might structure it incorrectly
         // Handle different parameter structures
@@ -239,7 +213,7 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
             XP = params.XP;
         } else if (params && typeof params === 'object' && 'taskName' in params && typeof params.taskName === 'object') {
             // Incorrect structure - all params nested in taskName
-            console.log('Detected incorrect parameter structure, extracting from nested object...');
+            logger.debug('Detected incorrect parameter structure, extracting from nested object...');
             const nested = params.taskName;
             taskName = nested.taskName || nested.name || '';
             taskDescription = nested.taskDescription || nested.description || '';
@@ -255,21 +229,10 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
             XP = params.XP || params.xp || 0;
         }
         
-        console.log('Extracted parameters:', {
-            taskName,
-            taskDescription,
-            taskStartTime,
-            taskEndTime,
-            XP
-        });
-        
         if (!taskName || !taskDescription || !taskStartTime || !taskEndTime || XP === undefined || XP === null) {
-            console.error('Missing required parameters for createTask');
-            console.error('taskName:', taskName, typeof taskName);
-            console.error('taskDescription:', taskDescription, typeof taskDescription);
-            console.error('taskStartTime:', taskStartTime, typeof taskStartTime);
-            console.error('taskEndTime:', taskEndTime, typeof taskEndTime);
-            console.error('XP:', XP, typeof XP);
+            logger.error('Missing required parameters for createTask', {
+                taskName, taskDescription, taskStartTime, taskEndTime, XP
+            });
             throw new Error(`Missing required parameters: taskName=${taskName}, taskDescription=${taskDescription}, taskStartTime=${taskStartTime}, taskEndTime=${taskEndTime}, XP=${XP}`);
         }
         
@@ -284,71 +247,35 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
                 XP: XP,
             };
             
-            console.log('Created task object:', {
-                id: newTask.id,
-                name: newTask.name,
-                startTime: newTask.startTime.toISOString(),
-                endTime: newTask.endTime.toISOString(),
-                XP: newTask.XP
-            });
-            
             const updatedState = {
                 ...currentState,
                 tasks: [...currentState.tasks, newTask],
             };
-            console.log('Calling setState with:', {
-                currentTasks: currentState.tasks.length,
-                newTasks: updatedState.tasks.length,
-                newTaskId: newTask.id
-            });
             
             await this.setState(updatedState);
-            console.log('setState completed');
-
-            // Verify state was updated
-            const verifyState = await this.state;
-            console.log(`State verification: ${verifyState.tasks.length} task(s) in state`);
-            if (verifyState.tasks.length > 0) {
-                console.log('Tasks in state:', verifyState.tasks.map(t => ({ id: t.id, name: t.name })));
-            }
-
             this.createdTasksThisMessage.push(newTask);
-            console.log(`Added task to createdTasksThisMessage. Current count: ${this.createdTasksThisMessage.length}`);
-            console.log('Task successfully created and added!');
             
-            // Don't call scheduleNextCleanupAlarm here - it triggers immediate cleanup
-            // Cleanup should happen via alarms, not synchronously after task creation
+            logger.taskOperation('created', 1, { taskId: newTask.id, taskName: newTask.name });
+            await this.scheduleNextCleanupAlarm();
             
-            console.log('=== TOOL CALL: createTask - COMPLETE ===');
             return newTask;
         } catch (error) {
-            console.error('Error creating task:', error);
+            logger.error('Error creating task:', error);
             throw error;
         }
     }
 
     async getCurrentTime(): Promise<string> {
-        console.log('=== TOOL CALL: getCurrentTime ===');
+        logger.toolCall('getCurrentTime');
         const currentTime = new Date().toISOString();
-        console.log('Current time:', currentTime);
-        console.log('=== TOOL CALL: getCurrentTime - COMPLETE ===');
+        logger.debug('Current time:', currentTime);
         return currentTime;
     }
 
     async viewTasks() {
-        console.log('=== TOOL CALL: viewTasks ===');
+        logger.toolCall('viewTasks');
         const currentState = await this.state;
-        console.log(`Retrieving tasks. Total tasks: ${currentState.tasks.length}`);
-        if (currentState.tasks.length > 0) {
-            console.log('Tasks:', currentState.tasks.map(t => ({
-                id: t.id,
-                name: t.name,
-                startTime: t.startTime.toISOString(),
-                endTime: t.endTime.toISOString(),
-                XP: t.XP
-            })));
-        }
-        console.log('=== TOOL CALL: viewTasks - COMPLETE ===');
+        logger.taskOperation('retrieved', currentState.tasks.length);
         return currentState.tasks;
     }
 
@@ -362,7 +289,7 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
         
         if (activeTasks.length !== currentState.tasks.length) {
             const expiredCount = currentState.tasks.length - activeTasks.length;
-            console.log(`Cleaning up ${expiredCount} expired task(s)`);
+            logger.taskOperation('cleaned up expired', expiredCount);
             await this.setState({
                 ...currentState,
                 tasks: activeTasks,
@@ -376,7 +303,6 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
     private async scheduleNextCleanupAlarm(): Promise<void> {
         try {
             const currentState = await this.state;
-            console.log('scheduleNextCleanupAlarm: current tasks:', currentState.tasks.length);
             if (currentState.tasks.length === 0) {
                 // No tasks, delete any existing alarm
                 const storage = (this as any).ctx?.storage;
@@ -391,26 +317,15 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
 
             // Find the earliest task expiration time
             const now = Date.now();
-            console.log('scheduleNextCleanupAlarm: current time:', new Date(now).toISOString());
-            console.log('scheduleNextCleanupAlarm: tasks:', currentState.tasks.map(t => ({
-                id: t.id,
-                name: t.name,
-                endTime: t.endTime instanceof Date ? t.endTime.toISOString() : String(t.endTime),
-                endTimeType: typeof t.endTime
-            })));
-            
             const expirationTimes = currentState.tasks
                 .map(task => {
                     const endTime = task.endTime instanceof Date ? task.endTime.getTime() : new Date(task.endTime).getTime();
-                    console.log(`Task ${task.id}: endTime=${task.endTime instanceof Date ? task.endTime.toISOString() : task.endTime}, timestamp=${endTime}, now=${now}, isFuture=${endTime > now}`);
                     return endTime;
                 })
                 .filter(time => time > now); // Only future expirations
 
-            console.log('scheduleNextCleanupAlarm: expirationTimes.length:', expirationTimes.length);
             if (expirationTimes.length === 0) {
                 // All tasks are expired, clean up now
-                console.log('scheduleNextCleanupAlarm: All tasks expired, cleaning up...');
                 await this.cleanupExpiredTasks();
                 return;
             }
@@ -419,7 +334,7 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
             const storage = (this as any).ctx?.storage;
             
             if (!storage) {
-                console.warn('Storage not available for alarm scheduling');
+                logger.warn('Storage not available for alarm scheduling');
                 return;
             }
 
@@ -428,10 +343,10 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
             // Only update alarm if it's different or doesn't exist
             if (!existingAlarm || existingAlarm !== earliestExpiration) {
                 await storage.setAlarm(earliestExpiration);
-                console.log(`Scheduled cleanup alarm for ${new Date(earliestExpiration).toISOString()}`);
+                logger.debug(`Scheduled cleanup alarm for ${new Date(earliestExpiration).toISOString()}`);
             }
         } catch (error) {
-            console.error('Error scheduling cleanup alarm:', error);
+            logger.error('Error scheduling cleanup alarm:', error);
         }
     }
 
@@ -440,7 +355,7 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
      * This will clean up expired tasks and schedule the next alarm
      */
     async alarm(): Promise<void> {
-        console.log('Alarm triggered - cleaning up expired tasks');
+        logger.info('Alarm triggered - cleaning up expired tasks');
         await this.cleanupExpiredTasks();
         await this.scheduleNextCleanupAlarm();
     }

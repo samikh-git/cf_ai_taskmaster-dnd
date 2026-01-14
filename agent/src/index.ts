@@ -1,27 +1,20 @@
-import { Agent, AgentNamespace, getAgentByName, routeAgentRequest } from 'agents';
-
+çimport { Agent, AgentNamespace, routeAgentRequest } from 'agents';
 import { TaskMasterAgent } from './agent';
+import { logger } from './logger';
 
 export { TaskMasterAgent };
 
 export interface Env {
-  // Define your Agent on the environment here
-  // Passing your Agent class as a TypeScript type parameter allows you to call
-  // methods defined on your Agent.
   TaskMasterAgent: AgentNamespace<TaskMasterAgent>;
   AI: Ai;
 }
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
-    console.log('=== Root fetch handler ===');
-    console.log('Request URL:', request.url);
-    console.log('Request method:', request.method);
-    console.log('Request pathname:', new URL(request.url).pathname);
+    logger.request(request.method, new URL(request.url).pathname);
     
     // Routed addressing
     // Automatically routes HTTP requests and/or WebSocket connections to /agents/:agent/:name
-    // Best for: connecting React apps directly to Agents using useAgent from agents/react
     return (await routeAgentRequest(request, env)) || Response.json({ msg: 'no agent here' }, { status: 404 });
   },
 } satisfies ExportedHandler<Env>;

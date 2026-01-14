@@ -1,166 +1,200 @@
-# TaskMasterAgent
+# TaskMaster Agent
 
-A Cloudflare Agent that helps users organize their tasks using an epic D&D fantasy theme. The agent transforms mundane tasks into quests and guides users through their productivity journey with immersive, Tolkien-esque narrative.
+A Cloudflare Agent (Durable Object) that provides AI-powered task management with a D&D fantasy theme.
 
-## Response Format
+## Overview
 
-When connecting to the TaskMasterAgent via WebSocket, the agent sends responses in the following format:
+The TaskMasterAgent is a Cloudflare Durable Object that acts as an AI Dungeon Master, helping users organize tasks through immersive, fantasy-themed interactions. The agent uses Cloudflare Workers AI to generate responses and manages tasks with persistent state.
 
-### 1. Text Response (Streamed)
+## Features
 
-The agent streams text responses directly over the WebSocket connection as chunks. These are the narrative responses from the AI Dungeon Master, written in an epic fantasy style.
+- **AI-Powered Interactions**: Uses `@cf/meta/llama-3.1-8b-instruct` for natural language processing
+- **Task Management**: Create, view, and manage tasks (quests) with fantasy descriptions
+- **Persistent State**: Tasks are stored in Durable Object state (SQLite)
+- **Streaming Responses**: HTTP streaming with Server-Sent Events (SSE)
+- **Automatic Cleanup**: Expired tasks are cleaned up automatically using Durable Object Alarms
+- **Centralized Logging**: Structured logging system for debugging and monitoring
 
-**Format:** Plain text chunks sent via `connection.send(chunk)`
+## Architecture
 
-**Example:**
+### Durable Object
+
+The agent extends Cloudflare's `Agent` class and uses Durable Objects for:
+- Persistent state storage (tasks)
+- Session management
+- Automatic task expiration cleanup
+
+### Tools
+
+The agent provides three tools for the AI model:
+
+1. **getCurrentTime**: Returns the current date/time in ISO 8601 format
+2. **createTask**: Creates a new task with name, description, start/end times, and XP
+3. **viewTasks**: Retrieves all active tasks from state
+
+### State Management
+
+Tasks are stored in the Durable Object's state:
+
+```typescript
+interface DMState {
+  tasks: Task[];
+}
+
+interface Task {
+  id: string;
+  name: string;
+  description: string;
+  startTime: Date;
+  endTime: Date;
+  XP: number;
+}
 ```
-"Greetings, brave adventurer! I have inscribed your quest into the chronicles..."
-"The Archive of Reports awaits your conquest. This task shall grant you..."
-```
 
-These text chunks arrive incrementally as the AI generates the response, providing a real-time streaming experience.
+## API
 
-### 2. Task Metadata (After Stream Completion)
+### GET `/agents/task-master-agent/{sessionId}`
 
-After the text stream completes, if any tasks were created during the interaction, the agent sends a metadata message containing information about the created tasks.
+Retrieves all tasks for a session.
 
-**Format:** JSON string sent via WebSocket
-
+**Response:**
 ```json
 {
-  "type": "metadata",
   "tasks": [
     {
-      "id": "uuid-string",
+      "id": "uuid",
       "name": "Task Name",
       "description": "Task Description",
-      "startTime": "2025-01-11T00:00:00.000Z",
-      "endTime": "2025-01-11T23:59:59.999Z",
-      "XP": 20
+      "startTime": "2026-01-15T14:00:00.000Z",
+      "endTime": "2026-01-15T18:00:00.000Z",
+      "XP": 50
     }
   ]
 }
 ```
 
-**Fields:**
-- `type`: Always `"metadata"` for task metadata messages
-- `tasks`: Array of task objects that were created during this interaction
-  - `id`: Unique identifier (UUID) for the task
-  - `name`: The task name as provided by the user
-  - `description`: The epic fantasy description of the task
-  - `startTime`: Start time as ISO 8601 date string
-  - `endTime`: End time as ISO 8601 date string
-  - `XP`: Experience points awarded for completing this task
+### POST `/agents/task-master-agent/{sessionId}`
 
-### 3. Agent State Updates (Automatic)
+Sends a chat message to the agent and receives a streaming response.
 
-The Cloudflare Agents framework automatically sends state update messages when the agent's state changes (e.g., when tasks are created or updated).
+**Request Body:** Plain text message
 
-**Format:** JSON string sent via WebSocket
+**Response:** Server-Sent Events (SSE) stream containing:
+- Text chunks with AI responses
+- Metadata message with created tasks (if any)
+- `[DONE]` marker when complete
 
+**Example Response Stream:**
+```
+data: Greetings, adventurer! I shall inscribe your quest...
+data: {"type":"metadata","tasks":[...]}
+data: [DONE]
+```
+
+## Response Format
+
+### Streaming Text
+
+The agent streams text responses in SSE format:
+```
+data: <text chunk>
+```
+
+### Task Metadata
+
+After streaming completes, if tasks were created, a metadata message is sent:
 ```json
 {
-  "type": "cf_agent_state",
-  "state": {
-    "tasks": [
-      {
-        "id": "uuid-string",
-        "name": "Task Name",
-        "description": "Task Description",
-        "startTime": "2025-01-11T00:00:00.000Z",
-        "endTime": "2025-01-11T23:59:59.999Z",
-        "XP": 20
-      }
-    ]
-  }
+  "type": "metadata",
+  "tasks": [
+    {
+      "id": "uuid",
+      "name": "Task Name",
+      "description": "Epic fantasy description",
+      "startTime": "2026-01-15T14:00:00.000Z",
+      "endTime": "2026-01-15T18:00:00.000Z",
+      "XP": 50
+    }
+  ]
 }
 ```
 
-**Note:** These state updates are sent automatically by the framework and contain the current state of all tasks, not just newly created ones.
+## Development
 
-### 4. MCP Server Updates (Automatic)
+### Setup
 
-The framework also sends MCP (Model Context Protocol) server state updates.
-
-**Format:** JSON string sent via WebSocket
-
-```json
-{
-  "type": "cf_agent_mcp_servers",
-  "mcp": {
-    "prompts": [],
-    "resources": [],
-    "servers": {},
-    "tools": []
-  }
-}
+```bash
+npm install
 ```
 
-## Complete Example Response Flow
+### Local Development
 
-When a user sends a message requesting task creation, the response flow looks like this:
-
-1. **Text chunks** (streamed incrementally):
-   ```
-   "Hail, traveler! I shall inscribe your quest into the ancient tome..."
-   "The Archive of Reports beckons - a task worthy of 20 experience points..."
-   "May your journey be fruitful!"
-   ```
-
-2. **Task metadata** (after stream completes):
-   ```json
-   {
-     "type": "metadata",
-     "tasks": [
-       {
-         "id": "6f410302-1633-4eaa-aec4-373f233b7f55",
-         "name": "Finish the report",
-         "description": "Venture into the depths of the Archive of Reports...",
-         "startTime": "2025-01-11T00:00:00.000Z",
-         "endTime": "2025-01-11T23:59:59.999Z",
-         "XP": 20
-       }
-     ]
-   }
-   ```
-
-3. **State update** (automatic, from framework):
-   ```json
-   {
-     "type": "cf_agent_state",
-     "state": {
-       "tasks": [...]
-     }
-   }
-   ```
-
-## WebSocket Connection
-
-Connect to the agent using the following URL pattern:
-
-```
-ws://localhost:8787/agents/TaskMasterAgent/{session-name}
+```bash
+npm run dev
 ```
 
-**Example:**
-```
-ws://localhost:8787/agents/TaskMasterAgent/test-session
-```
+The agent will be available at `http://localhost:8787`
 
-## Sending Messages
+### Testing
 
-Send messages to the agent as JSON with a `content` field:
-
-```json
-{
-  "content": "Hello! I need help organizing my tasks."
-}
+Run unit tests:
+```bash
+npm test
 ```
 
-## Implementation Details
+Run manual tests:
+```bash
+npm run test:manual
+npm run test:agent
+```
 
-- The agent uses `connection.send()` to stream text chunks directly over WebSocket
-- Text responses are generated using Cloudflare Workers AI with function calling support
-- Tasks are created via the `createTask` tool function
-- The agent always provides narrative text responses alongside tool usage (per system prompt requirements)
+### Deployment
 
+```bash
+npm run deploy
+```
+
+## Configuration
+
+### wrangler.jsonc
+
+- **Durable Object**: `TaskMasterAgent` class
+- **AI Binding**: `AI` (configure in Cloudflare dashboard)
+- **Compatibility Flags**: `nodejs_compat`, `durable_object_alarms`
+
+### Environment Variables
+
+No environment variables required. AI binding must be configured in Cloudflare dashboard.
+
+## Logging
+
+The agent uses a centralized logging system (`src/logger.ts`) with the following levels:
+- `debug`: Detailed debugging information
+- `info`: General information (default)
+- `warn`: Warnings
+- `error`: Errors
+
+Logs are prefixed with level tags: `[DEBUG]`, `[INFO]`, `[WARN]`, `[ERROR]`
+
+## System Prompt
+
+The AI agent uses a custom system prompt (`src/system_prompt.ts`) that:
+- Frames the agent as a Dungeon Master
+- Instructs the AI to use Tolkien-esque, immersive prose
+- Emphasizes that tasks should have different start/end times
+- Requires narrative text responses alongside tool usage
+
+## Task Cleanup
+
+The agent automatically cleans up expired tasks using Durable Object Alarms:
+- An alarm is scheduled for the earliest task expiration
+- When the alarm fires, expired tasks are removed
+- A new alarm is scheduled for the next earliest expiration
+
+## Files
+
+- `src/agent.ts`: Main agent class with tool definitions and request handling
+- `src/index.ts`: Worker entry point
+- `src/logger.ts`: Centralized logging utility
+- `src/system_prompt.ts`: AI system prompt
+- `tests/`: Test files (see `tests/README.md`)
