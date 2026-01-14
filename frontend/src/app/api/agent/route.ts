@@ -1,14 +1,12 @@
 import { NextRequest } from 'next/server';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { sessionId?: string } }
-) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
     const sessionId = request.headers.get('x-session-id') || `session-${Date.now()}`;
     
-    const agentUrl = `http://localhost:8787/agents/task-master-agent/${sessionId}`;
+    const agentBaseUrl = process.env.AGENT_URL || 'https://agent.sami-houssaini.workers.dev';
+    const agentUrl = `${agentBaseUrl}/agents/task-master-agent/${sessionId}`;
     
     const response = await fetch(agentUrl, {
       method: 'POST',
@@ -36,7 +34,7 @@ export async function POST(
         'Connection': 'keep-alive',
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error proxying to agent:', error);
     return new Response(
       JSON.stringify({ error: 'Failed to connect to agent' }),

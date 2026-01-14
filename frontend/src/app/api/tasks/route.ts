@@ -4,7 +4,8 @@ export async function GET(request: NextRequest) {
   try {
     const sessionId = request.headers.get('x-session-id') || request.nextUrl.searchParams.get('sessionId') || `session-${Date.now()}`;
     
-    const agentUrl = `http://localhost:8787/agents/task-master-agent/${sessionId}`;
+    const agentBaseUrl = process.env.AGENT_URL || 'https://agent.sami-houssaini.workers.dev';
+    const agentUrl = `${agentBaseUrl}/agents/task-master-agent/${sessionId}`;
     
     const response = await fetch(agentUrl, {
       method: 'GET',
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
         'Content-Type': 'application/json',
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching tasks:', error);
     return new Response(
       JSON.stringify({ error: 'Failed to fetch tasks' }),
