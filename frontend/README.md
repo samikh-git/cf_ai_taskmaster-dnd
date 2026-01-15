@@ -1,6 +1,6 @@
-# TaskMaster Frontend
+# QuestMaster Frontend
 
-A Next.js web application that provides a chat interface and task dashboard for interacting with the TaskMaster Agent.
+A Next.js web application that provides a chat interface and task dashboard for interacting with the QuestMaster Agent.
 
 ## Overview
 
@@ -46,8 +46,26 @@ frontend/
 
 ### Setup
 
+1. **Install dependencies:**
 ```bash
 npm install
+```
+
+2. **Set up environment variables:**
+```bash
+# Copy the example environment file
+cp .env.example .env.local
+
+# Edit .env.local with your values:
+# - AGENT_URL: Set to http://localhost:8787 for local development
+# - NEXTAUTH_SECRET: Generate with: openssl rand -base64 32
+# - NEXTAUTH_URL: http://localhost:3000 for local development
+# - GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET: From GitHub OAuth app settings
+```
+
+3. **Start the development server:**
+```bash
+npm run dev
 ```
 
 ### Local Development
@@ -144,11 +162,31 @@ Fetches all tasks for the current session.
 
 ## Configuration
 
-### Agent URL
+### Environment Variables
 
-The frontend connects to the agent at `http://localhost:8787` in development. This is hardcoded in the API routes (`src/app/api/agent/route.ts` and `src/app/api/tasks/route.ts`).
+The frontend uses environment variables for configuration. Create a `.env.local` file (or `.env.production` for production) with the following variables:
 
-For production, update these URLs to point to your deployed agent.
+| Variable | Description | Development | Production |
+|----------|-------------|-------------|------------|
+| `AGENT_URL` | URL of the Cloudflare Agent Worker | `http://localhost:8787` | `https://agent.sami-houssaini.workers.dev` |
+| `NEXTAUTH_SECRET` | Secret key for NextAuth session encryption | Generate with `openssl rand -base64 32` | Same |
+| `NEXTAUTH_URL` | Base URL of your application | `http://localhost:3000` | Your production URL |
+| `GITHUB_CLIENT_ID` | GitHub OAuth Client ID | From GitHub OAuth app | Same |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | From GitHub OAuth app | Same |
+
+**Default Behavior:**
+- If `AGENT_URL` is not set, the app defaults to:
+  - `http://localhost:8787` in development (`NODE_ENV=development`)
+  - `https://agent.sami-houssaini.workers.dev` in production (`NODE_ENV=production`)
+
+**Example `.env.local` for development:**
+```bash
+AGENT_URL=http://localhost:8787
+NEXTAUTH_SECRET=your-generated-secret-here
+NEXTAUTH_URL=http://localhost:3000
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+```
 
 ### Session Management
 
@@ -202,7 +240,5 @@ Tasks are automatically updated when:
 
 ## Known Limitations
 
-- Demo authentication (no real user management)
-- Local agent URL hardcoded (needs configuration for production)
 - No offline support
 - No push notifications for task deadlines

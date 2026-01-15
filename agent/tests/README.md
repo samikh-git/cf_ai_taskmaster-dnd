@@ -1,6 +1,6 @@
 # Tests Directory
 
-This directory contains all testing-related files for the TaskMasterAgent.
+This directory contains all testing-related files for the QuestMasterAgent.
 
 ## Files
 
@@ -102,7 +102,7 @@ npm run test:manual
 ```
 
 The manual test script will:
-1. Connect to the TaskMasterAgent WebSocket endpoint
+1. Connect to the QuestMasterAgent WebSocket endpoint
 2. Send a test message
 3. Display any responses
 4. Close after 10 seconds

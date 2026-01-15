@@ -1,10 +1,10 @@
-# TaskMaster Agent
+# QuestMaster Agent
 
 A Cloudflare Agent (Durable Object) that provides AI-powered task management with a D&D fantasy theme.
 
 ## Overview
 
-The TaskMasterAgent is a Cloudflare Durable Object that acts as an AI Dungeon Master, helping users organize tasks through immersive, fantasy-themed interactions. The agent uses Cloudflare Workers AI to generate responses and manages tasks with persistent state.
+The QuestMasterAgent is a Cloudflare Durable Object that acts as an AI Dungeon Master, helping users organize tasks through immersive, fantasy-themed interactions. The agent uses Cloudflare Workers AI to generate responses and manages tasks with persistent state.
 
 ## Features
 
@@ -53,7 +53,7 @@ interface Task {
 
 ## API
 
-### GET `/agents/task-master-agent/{sessionId}`
+### GET `/agents/quest-master-agent/{sessionId}`
 
 Retrieves all tasks for a session.
 
@@ -73,7 +73,7 @@ Retrieves all tasks for a session.
 }
 ```
 
-### POST `/agents/task-master-agent/{sessionId}`
+### POST `/agents/quest-master-agent/{sessionId}`
 
 Sends a chat message to the agent and receives a streaming response.
 
@@ -158,7 +158,7 @@ npm run deploy
 
 ### wrangler.jsonc
 
-- **Durable Object**: `TaskMasterAgent` class
+- **Durable Object**: `QuestMasterAgent` class
 - **AI Binding**: `AI` (configure in Cloudflare dashboard)
 - **Compatibility Flags**: `nodejs_compat`, `durable_object_alarms`
 

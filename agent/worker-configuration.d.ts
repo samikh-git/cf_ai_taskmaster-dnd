@@ -4,10 +4,10 @@
 declare namespace Cloudflare {
 	interface GlobalProps {
 		mainModule: typeof import("./src/index");
-		durableNamespaces: "TaskMasterAgent";
+		durableNamespaces: "QuestMasterAgent";
 	}
 	interface Env {
-		TaskMasterAgent: DurableObjectNamespace<import("./src/index").TaskMasterAgent>;
+		QuestMasterAgent: DurableObjectNamespace<import("./src/index").QuestMasterAgent>;
 		AI: Ai;
 	}
 }

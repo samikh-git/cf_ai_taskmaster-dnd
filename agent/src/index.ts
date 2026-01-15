@@ -1,11 +1,11 @@
-çimport { Agent, AgentNamespace, routeAgentRequest } from 'agents';
-import { TaskMasterAgent } from './agent';
+import { Agent, AgentNamespace, routeAgentRequest } from 'agents';
+import { QuestMasterAgent } from './agent';
 import { logger } from './logger';
 
-export { TaskMasterAgent };
+export { QuestMasterAgent };
 
 export interface Env {
-  TaskMasterAgent: AgentNamespace<TaskMasterAgent>;
+  QuestMasterAgent: AgentNamespace<QuestMasterAgent>;
   AI: Ai;
 }
 

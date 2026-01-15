@@ -22,5 +22,6 @@
 body {
 	background: var(--background);
 	color: var(--foreground);
-	font-family: "Garamond", "Garamond Premier Pro", "Adobe Garamond Pro", "Apple Garamond", "EB Garamond", serif;
+	/* Use Next.js optimized Lora (60% similar to Bookman Old Style, perfect for D&D theme) with fallbacks */
+	font-family: var(--font-lora), "Bookman Old Style", "Bookman", "URW Bookman L", "Libero Bookman", "Liberation Serif", Georgia, "Times New Roman", serif;
 }

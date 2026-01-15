@@ -1,10 +1,10 @@
-# TaskMaster D&D
+# QuestMaster
 
 A D&D-themed task management application that transforms mundane tasks into epic quests. Built with Cloudflare Workers, Durable Objects, and Next.js.
 
 ## Overview
 
-TaskMaster D&D is a productivity application that gamifies task management through a Dungeon & Dragons theme. Users interact with an AI Dungeon Master that transforms their daily tasks into epic quests, complete with fantasy descriptions, experience points (XP), and immersive storytelling.
+QuestMaster is a productivity application that gamifies task management through a Dungeon & Dragons theme. Users interact with an AI Dungeon Master that transforms their daily tasks into epic quests, complete with fantasy descriptions, experience points (XP), and immersive storytelling.
 
 The application consists of:
 - **Agent**: A Cloudflare Agent (Durable Object) that manages tasks and provides AI-powered interactions
@@ -33,10 +33,10 @@ Try the application online: **[https://frontend.sami-houssaini.workers.dev](http
 ## Project Structure
 
 ```
-taskmaster-dnd/
+questmaster/
 ├── agent/              # Cloudflare Agent (Durable Object)
 │   ├── src/
-│   │   ├── agent.ts    # TaskMasterAgent class
+│   │   ├── agent.ts    # QuestMasterAgent class
 │   │   ├── index.ts    # Worker entry point
 │   │   ├── logger.ts   # Centralized logging utility
 │   │   └── system_prompt.ts  # AI system prompt
@@ -104,7 +104,7 @@ The frontend will be available at `http://localhost:3000`
 The agent requires a Cloudflare AI binding. Configure this in your Cloudflare dashboard or via `wrangler.toml` (not included in repo).
 
 Key configuration in `agent/wrangler.jsonc`:
-- Durable Object: `TaskMasterAgent`
+- Durable Object: `QuestMasterAgent`
 - Compatibility flags: `nodejs_compat`, `durable_object_alarms`
 - AI binding: `AI`
 

@@ -1,0 +1,314 @@
+'use client';
+
+import Link from 'next/link';
+import { useSession, signIn } from 'next-auth/react';
+
+export default function AboutPage() {
+  const { data: session } = useSession();
+
+  return (
+    <div className="min-h-screen bg-black text-orange-200">
+      {/* Header */}
+      <header className="border-b border-orange-900/50 bg-black/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-3">
+              <h1 className="text-xl font-bold text-orange-600">QuestMaster</h1>
+            </Link>
+            <div className="flex items-center gap-4">
+              {session ? (
+                <Link
+                  href="/"
+                  className="text-sm text-orange-500 hover:text-orange-400 px-3 py-1 rounded hover:bg-gray-950 transition-colors"
+                >
+                  Back to App
+                </Link>
+              ) : (
+                <button
+                  onClick={() => signIn('github')}
+                  className="text-sm text-orange-500 hover:text-orange-400 px-3 py-1 rounded hover:bg-gray-950 transition-colors"
+                >
+                  Sign In
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="space-y-12">
+          {/* Hero Section */}
+          <div className="text-center space-y-4">
+            <h1 className="text-4xl md:text-5xl font-bold text-orange-600">
+              QuestMaster
+            </h1>
+            <p className="text-xl text-orange-400">
+              Transform Your Daily Tasks Into Epic Quests
+            </p>
+            <p className="text-lg text-orange-300/80 max-w-2xl mx-auto">
+              A D&D-themed task management application powered by AI that gamifies productivity 
+              through immersive storytelling and fantasy-themed quests.
+            </p>
+          </div>
+
+          {/* How It Works */}
+          <section className="space-y-6">
+            <h2 className="text-3xl font-bold text-orange-600 border-b border-orange-900/50 pb-2">
+              How It Works
+            </h2>
+            
+            <div className="space-y-6">
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-6 space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">
+                  1. Sign In with GitHub
+                </h3>
+                <p className="text-orange-200/90 leading-relaxed">
+                  Authenticate using your GitHub account. Your session is securely managed through 
+                  NextAuth.js, ensuring only you can access your quests and progress.
+                </p>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-6 space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">
+                  2. Chat with the AI Dungeon Master
+                </h3>
+                <p className="text-orange-200/90 leading-relaxed">
+                  Interact with an AI-powered Dungeon Master that speaks in epic, Tolkien-esque prose. 
+                  Simply describe your tasks in natural language, and watch as they&apos;re transformed 
+                  into fantastical quests complete with immersive descriptions, deadlines, and experience points.
+                </p>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-6 space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">
+                  3. Manage Your Quest Log
+                </h3>
+                <p className="text-orange-200/90 leading-relaxed">
+                  View all your active quests, upcoming challenges, and expired missions in the Quest Log 
+                  dashboard. Each quest displays its name, description, time windows, and XP rewards. 
+                  Tasks are automatically organized by status and cleaned up when they expire.
+                </p>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-6 space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">
+                  4. Track Your Progress
+                </h3>
+                <p className="text-orange-200/90 leading-relaxed">
+                  Experience points (XP) are dynamically assigned based on task complexity and difficulty. 
+                  The AI Dungeon Master determines appropriate XP rewards, making more challenging quests 
+                  more rewarding. Complete your quests to level up your productivity!
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Technology Stack */}
+          <section className="space-y-6">
+            <h2 className="text-3xl font-bold text-orange-600 border-b border-orange-900/50 pb-2">
+              Technology Stack
+            </h2>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-6 space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">Backend</h3>
+                <ul className="space-y-2 text-orange-200/90">
+                  <li>• <strong>Cloudflare Workers</strong> - Serverless edge computing</li>
+                  <li>• <strong>Durable Objects</strong> - Persistent state management</li>
+                  <li>• <strong>Cloudflare AI</strong> - LLM integration (Llama 3.1 8B)</li>
+                  <li>• <strong>Durable Object Alarms</strong> - Automatic task cleanup</li>
+                </ul>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-6 space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">Frontend</h3>
+                <ul className="space-y-2 text-orange-200/90">
+                  <li>• <strong>Next.js 15</strong> - React framework with App Router</li>
+                  <li>• <strong>React 19</strong> - UI library</li>
+                  <li>• <strong>NextAuth.js</strong> - Authentication</li>
+                  <li>• <strong>Tailwind CSS</strong> - Styling</li>
+                </ul>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-6 space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">AI & Features</h3>
+                <ul className="space-y-2 text-orange-200/90">
+                  <li>• <strong>Streaming Responses</strong> - Real-time AI text streaming</li>
+                  <li>• <strong>Tool Calling</strong> - AI can create and manage tasks</li>
+                  <li>• <strong>Rate Limiting</strong> - Prevents API credit abuse</li>
+                  <li>• <strong>Persistent Storage</strong> - Tasks persist across sessions</li>
+                </ul>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-6 space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">Deployment</h3>
+                <ul className="space-y-2 text-orange-200/90">
+                  <li>• <strong>Cloudflare Workers</strong> - Backend deployment</li>
+                  <li>• <strong>Cloudflare Pages</strong> - Frontend hosting</li>
+                  <li>• <strong>Edge Network</strong> - Global low-latency access</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          {/* Architecture */}
+          <section className="space-y-6">
+            <h2 className="text-3xl font-bold text-orange-600 border-b border-orange-900/50 pb-2">
+              Architecture
+            </h2>
+            
+            <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-6 space-y-4">
+              <div className="space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">Agent (Durable Object)</h3>
+                <p className="text-orange-200/90 leading-relaxed">
+                  The core of QuestMaster is a Cloudflare Durable Object that maintains persistent 
+                  state for each user session. It handles HTTP requests, streams AI responses using 
+                  Server-Sent Events (SSE), and automatically cleans up expired tasks using Durable 
+                  Object Alarms. Each user gets their own isolated Durable Object instance.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">AI Integration</h3>
+                <p className="text-orange-200/90 leading-relaxed">
+                  The AI Dungeon Master uses Cloudflare&apos;s AI Workers to run Llama 3.1 8B Instruct 
+                  model. It&apos;s equipped with tools that allow it to create tasks, view tasks, and 
+                  check the current time. The AI receives detailed system prompts that guide it to 
+                  respond in an epic, fantasy-themed style while being helpful and productive.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">Frontend</h3>
+                <p className="text-orange-200/90 leading-relaxed">
+                  The Next.js frontend provides a real-time chat interface that streams AI responses 
+                  as they&apos;re generated. A collapsible dashboard displays all quests organized by 
+                  status (Active, Upcoming, Expired). The interface maintains session state using 
+                  localStorage and proxies requests to the agent through API routes to avoid CORS issues.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Features */}
+          <section className="space-y-6">
+            <h2 className="text-3xl font-bold text-orange-600 border-b border-orange-900/50 pb-2">
+              Key Features
+            </h2>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-4">
+                <h4 className="font-semibold text-orange-500 mb-2">AI-Powered Quest Creation</h4>
+                <p className="text-sm text-orange-200/90">
+                  Natural language processing transforms your tasks into epic quests with immersive descriptions.
+                </p>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-4">
+                <h4 className="font-semibold text-orange-500 mb-2">Real-Time Streaming</h4>
+                <p className="text-sm text-orange-200/90">
+                  Watch AI responses stream in real-time, creating an engaging conversational experience.
+                </p>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-4">
+                <h4 className="font-semibold text-orange-500 mb-2">Dynamic XP System</h4>
+                <p className="text-sm text-orange-200/90">
+                  Experience points are assigned based on task complexity, making challenging quests more rewarding.
+                </p>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-4">
+                <h4 className="font-semibold text-orange-500 mb-2">Automatic Cleanup</h4>
+                <p className="text-sm text-orange-200/90">
+                  Expired tasks are automatically cleaned up using Cloudflare Durable Object Alarms.
+                </p>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-4">
+                <h4 className="font-semibold text-orange-500 mb-2">Persistent State</h4>
+                <p className="text-sm text-orange-200/90">
+                  All quests are stored in Durable Object state, persisting across sessions and page refreshes.
+                </p>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-4">
+                <h4 className="font-semibold text-orange-500 mb-2">Rate Limiting</h4>
+                <p className="text-sm text-orange-200/90">
+                  Built-in rate limiting prevents API credit abuse while allowing normal usage patterns.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Example Interaction */}
+          <section className="space-y-6">
+            <h2 className="text-3xl font-bold text-orange-600 border-b border-orange-900/50 pb-2">
+              Example Interaction
+            </h2>
+            
+            <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-6 space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-start gap-3">
+                  <span className="text-orange-500 font-semibold min-w-[80px]">You:</span>
+                  <p className="text-orange-200/90">I need to finish my report by Friday</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-orange-500 font-semibold min-w-[80px]">DM:</span>
+                  <p className="text-orange-200/90 italic">
+                    &quot;Hail, traveler! I shall inscribe your quest into the ancient tome. Venture into the 
+                    depths of the Archive of Reports, where shadows of unfinished work lurk, and emerge 
+                    victorious with a completed tome. This quest shall grant you 50 experience points upon 
+                    completion...&quot;
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* CTA */}
+          <section className="text-center space-y-4 pt-8">
+            {!session ? (
+              <>
+                <h2 className="text-2xl font-bold text-orange-600">
+                  Ready to Begin Your Quest?
+                </h2>
+                <p className="text-orange-300/80">
+                  Sign in with GitHub to start transforming your tasks into epic adventures.
+                </p>
+                <button
+                  onClick={() => signIn('github')}
+                  className="bg-orange-900 hover:bg-orange-800 text-white font-semibold py-3 px-6 rounded-lg transition-colors border border-orange-800"
+                >
+                  Sign In with GitHub
+                </button>
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold text-orange-600">
+                  Continue Your Adventure
+                </h2>
+                <Link
+                  href="/"
+                  className="inline-block bg-orange-900 hover:bg-orange-800 text-white font-semibold py-3 px-6 rounded-lg transition-colors border border-orange-800"
+                >
+                  Return to Quest Log
+                </Link>
+              </>
+            )}
+          </section>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-orange-900/50 mt-16 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-orange-400/70">
+          <p>QuestMaster - Transform your productivity into an epic adventure</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+

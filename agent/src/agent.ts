@@ -1,15 +1,18 @@
-import { Agent } from "agents";
+import { Agent, AgentNamespace } from "agents";
 import { runWithTools } from "@cloudflare/ai-utils";
 import { systemPromptDM } from "./system_prompt";
 import { logger } from "./logger";
 
 
 interface Env {
-    AI: Ai
+    AI: Ai;
+    QuestMasterAgent: AgentNamespace<QuestMasterAgent>;
 }
 
 interface DMState {
     tasks: Task[];
+    timezone?: string; // User's timezone (e.g., "America/New_York", "Europe/London")
+    totalXP: number; // Total XP earned from completed tasks
 }
 
 interface Task {
@@ -21,9 +24,11 @@ interface Task {
     XP: number;
 }
 
-export class TaskMasterAgent extends Agent<Env, DMState> {
+export class QuestMasterAgent extends Agent<Env, DMState> {
     initialState: DMState = {
-        tasks: []
+        tasks: [],
+        timezone: undefined,
+        totalXP: 0
     };
 
     private createdTasksThisMessage: Task[] = [];
@@ -66,26 +71,145 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
     ];
     
     async onRequest(request: Request): Promise<Response> {
+        // Check for timezone header and store it if not already set
+        const timezoneHeader = request.headers.get('x-timezone');
+        if (timezoneHeader) {
+            const currentState = await this.state;
+            if (!currentState.timezone) {
+                // Store timezone on first connection
+                await this.setState({
+                    ...currentState,
+                    timezone: timezoneHeader
+                });
+                logger.info('Stored user timezone:', timezoneHeader);
+            }
+        }
+
         // Handle GET requests for fetching tasks
         if (request.method === 'GET') {
             const currentState = await this.state;
             logger.request('GET', '/tasks', { taskCount: currentState.tasks.length });
             
-            const tasks = currentState.tasks.map(task => ({
-                id: task.id,
-                name: task.name,
-                description: task.description,
-                startTime: task.startTime.toISOString(),
-                endTime: task.endTime.toISOString(),
-                XP: task.XP
-            }));
+            const tasks = currentState.tasks.map(task => {
+                // Handle Date objects that may have been serialized to strings
+                const startTime = task.startTime instanceof Date 
+                    ? task.startTime.toISOString() 
+                    : (typeof task.startTime === 'string' ? task.startTime : new Date(task.startTime).toISOString());
+                const endTime = task.endTime instanceof Date 
+                    ? task.endTime.toISOString() 
+                    : (typeof task.endTime === 'string' ? task.endTime : new Date(task.endTime).toISOString());
+                
+                return {
+                    id: task.id,
+                    name: task.name,
+                    description: task.description,
+                    startTime,
+                    endTime,
+                    XP: task.XP
+                };
+            });
             
-            return new Response(JSON.stringify({ tasks }), {
+            return new Response(JSON.stringify({ 
+                tasks,
+                totalXP: currentState.totalXP || 0
+            }), {
                 headers: {
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*',
                 }
             });
+        }
+
+        // Handle POST requests for creating tasks directly (bypassing AI)
+        if (request.method === 'POST') {
+            const contentType = request.headers.get('content-type');
+            if (contentType?.includes('application/json')) {
+                try {
+                    const body = await request.json() as { tool?: string; params?: any };
+                    if (body.tool === 'createTask' && body.params) {
+                        logger.request('POST', '/createTask', body.params);
+                        const createdTask = await this.createTask(body.params);
+                        // Handle Date objects that may have been serialized
+                        const startTime = createdTask.startTime instanceof Date 
+                            ? createdTask.startTime.toISOString() 
+                            : (typeof createdTask.startTime === 'string' ? createdTask.startTime : new Date(createdTask.startTime).toISOString());
+                        const endTime = createdTask.endTime instanceof Date 
+                            ? createdTask.endTime.toISOString() 
+                            : (typeof createdTask.endTime === 'string' ? createdTask.endTime : new Date(createdTask.endTime).toISOString());
+                        
+                        return new Response(JSON.stringify({ 
+                            success: true,
+                            task: {
+                                id: createdTask.id,
+                                name: createdTask.name,
+                                description: createdTask.description,
+                                startTime,
+                                endTime,
+                                XP: createdTask.XP
+                            }
+                        }), {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Access-Control-Allow-Origin': '*',
+                            }
+                        });
+                    }
+                    
+                    if (body.tool === 'updateTask' && body.params) {
+                        logger.request('POST', '/updateTask', body.params);
+                        const updatedTask = await this.updateTask(body.params);
+                        const startTime = updatedTask.startTime instanceof Date 
+                            ? updatedTask.startTime.toISOString() 
+                            : (typeof updatedTask.startTime === 'string' ? updatedTask.startTime : new Date(updatedTask.startTime).toISOString());
+                        const endTime = updatedTask.endTime instanceof Date 
+                            ? updatedTask.endTime.toISOString() 
+                            : (typeof updatedTask.endTime === 'string' ? updatedTask.endTime : new Date(updatedTask.endTime).toISOString());
+                        
+                        return new Response(JSON.stringify({ 
+                            success: true,
+                            task: {
+                                id: updatedTask.id,
+                                name: updatedTask.name,
+                                description: updatedTask.description,
+                                startTime,
+                                endTime,
+                                XP: updatedTask.XP
+                            }
+                        }), {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Access-Control-Allow-Origin': '*',
+                            }
+                        });
+                    }
+                    
+                    if (body.tool === 'deleteTask' && body.params) {
+                        logger.request('POST', '/deleteTask', body.params);
+                        const addXP = body.params.addXP === true; // Only add XP if explicitly set to true
+                        await this.deleteTask(body.params.taskId, addXP);
+                        return new Response(JSON.stringify({ 
+                            success: true
+                        }), {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Access-Control-Allow-Origin': '*',
+                            }
+                        });
+                    }
+                } catch (error) {
+                    logger.error('Error in direct task creation:', error);
+                    return new Response(JSON.stringify({ 
+                        success: false,
+                        error: error instanceof Error ? error.message : 'Failed to create task'
+                    }), {
+                        status: 400,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*',
+                        }
+                    });
+                }
+            }
         }
 
         // Handle POST requests for chat messages
@@ -156,14 +280,24 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
                     
                     if (tasksToSend.length > 0) {
                         logger.taskOperation('sending metadata', tasksToSend.length);
-                        const serializedTasks = tasksToSend.map((task: Task) => ({
-                            id: task.id,
-                            name: task.name,
-                            description: task.description,
-                            startTime: task.startTime.toISOString(),
-                            endTime: task.endTime.toISOString(),
-                            XP: task.XP
-                        }));
+                        const serializedTasks = tasksToSend.map((task: Task) => {
+                            // Handle Date objects that may have been serialized to strings
+                            const startTime = task.startTime instanceof Date 
+                                ? task.startTime.toISOString() 
+                                : (typeof task.startTime === 'string' ? task.startTime : new Date(task.startTime).toISOString());
+                            const endTime = task.endTime instanceof Date 
+                                ? task.endTime.toISOString() 
+                                : (typeof task.endTime === 'string' ? task.endTime : new Date(task.endTime).toISOString());
+                            
+                            return {
+                                id: task.id,
+                                name: task.name,
+                                description: task.description,
+                                startTime,
+                                endTime,
+                                XP: task.XP
+                            };
+                        });
                         
                         // Send metadata as SSE formatted data
                         const metadataJson = JSON.stringify({
@@ -267,9 +401,35 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
 
     async getCurrentTime(): Promise<string> {
         logger.toolCall('getCurrentTime');
-        const currentTime = new Date().toISOString();
-        logger.debug('Current time:', currentTime);
-        return currentTime;
+        const currentState = await this.state;
+        const timezone = currentState.timezone;
+        
+        const now = new Date();
+        
+        if (timezone) {
+            // Simply format the date in the user's timezone using Intl.DateTimeFormat
+            // This automatically handles DST and all timezone complexities
+            const formatter = new Intl.DateTimeFormat('sv-SE', {
+                timeZone: timezone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            // Returns: YYYY-MM-DD HH:mm:ss (sv-SE locale format)
+            const localTime = formatter.format(now).replace(' ', 'T');
+            
+            // Return with timezone identifier - the AI can use this directly
+            const result = `${localTime} (timezone: ${timezone})`;
+            logger.debug('Current time:', result);
+            return result;
+        }
+        
+        // Fallback to UTC
+        return now.toISOString();
     }
 
     async viewTasks() {
@@ -279,13 +439,82 @@ export class TaskMasterAgent extends Agent<Env, DMState> {
         return currentState.tasks;
     }
 
+    async updateTask(params: { taskId: string; endTime?: string }) {
+        logger.toolCall('updateTask', params);
+        const currentState = await this.state;
+        
+        const taskIndex = currentState.tasks.findIndex(t => t.id === params.taskId);
+        if (taskIndex === -1) {
+            throw new Error(`Task with id ${params.taskId} not found`);
+        }
+        
+        const task = currentState.tasks[taskIndex];
+        const updatedTask = { ...task };
+        
+        if (params.endTime) {
+            updatedTask.endTime = new Date(params.endTime);
+        }
+        
+        const updatedTasks = [...currentState.tasks];
+        updatedTasks[taskIndex] = updatedTask;
+        
+        await this.setState({
+            ...currentState,
+            tasks: updatedTasks,
+        });
+        
+        // Reschedule cleanup alarm if end time changed
+        if (params.endTime) {
+            await this.scheduleNextCleanupAlarm();
+        }
+        
+        logger.taskOperation('updated', 1);
+        return updatedTask;
+    }
+
+    async deleteTask(taskId: string, addXP: boolean = false) {
+        logger.toolCall('deleteTask', { taskId, addXP });
+        const currentState = await this.state;
+        
+        const taskToDelete = currentState.tasks.find(t => t.id !== taskId);
+        if (!taskToDelete) {
+            throw new Error(`Task with id ${taskId} not found`);
+        }
+        
+        const updatedTasks = currentState.tasks.filter(t => t.id !== taskId);
+        
+        // If addXP is true, add the task's XP to totalXP (task was finished)
+        let newTotalXP = currentState.totalXP || 0;
+        if (addXP) {
+            newTotalXP += taskToDelete.XP;
+            logger.info(`Added ${taskToDelete.XP} XP. New total: ${newTotalXP}`);
+        }
+        
+        await this.setState({
+            ...currentState,
+            tasks: updatedTasks,
+            totalXP: newTotalXP,
+        });
+        
+        // Reschedule cleanup alarm
+        await this.scheduleNextCleanupAlarm();
+        
+        logger.taskOperation('deleted', 1);
+    }
+
     /**
      * Clean up expired tasks from state
      */
     private async cleanupExpiredTasks(): Promise<void> {
         const currentState = await this.state;
         const now = new Date();
-        const activeTasks = currentState.tasks.filter(task => task.endTime > now);
+        const activeTasks = currentState.tasks.filter(task => {
+            // Handle Date objects that may have been serialized to strings
+            const endTime = task.endTime instanceof Date 
+                ? task.endTime 
+                : new Date(task.endTime);
+            return endTime > now;
+        });
         
         if (activeTasks.length !== currentState.tasks.length) {
             const expiredCount = currentState.tasks.length - activeTasks.length;

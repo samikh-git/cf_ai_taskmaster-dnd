@@ -10,7 +10,7 @@
 	"migrations": [
 		{
 			"new_sqlite_classes": [
-				"TaskMasterAgent"
+				"QuestMasterAgent"
 			],
 			"tag": "v1"
 		}
@@ -18,8 +18,8 @@
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "TaskMasterAgent",
-				"name": "TaskMasterAgent"
+				"class_name": "QuestMasterAgent",
+				"name": "QuestMasterAgent"
 			}
 		]
 	},
