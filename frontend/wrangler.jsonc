@@ -29,11 +29,18 @@
 			// Self-reference service binding, the service name must match the worker name
 			// see https://opennext.js.org/cloudflare/caching
 			"binding": "WORKER_SELF_REFERENCE",
-			"service": "frontend"
+			"service": "frontend",
+			"environment": "production"
 		}
 	],
 	"observability": {
 		"enabled": true
+	},
+	"vars": {
+		"AGENT_URL": "https://agent.sami-houssaini.workers.dev",
+		"AUTH_URL": "https://frontend.sami-houssaini.workers.dev/",
+		"GITHUB_CLIENT_ID": "Ov23linjiTP9zTeczfEe",
+		"NEXTAUTH_URL": "https://frontend.sami-houssaini.workers.dev/"
 	}
 	/**
 	 * Smart Placement
