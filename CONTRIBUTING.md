@@ -2,6 +2,8 @@
 
 Thank you for your interest in contributing to QuestMaster! This document provides guidelines and instructions for contributing.
 
+**Note**: This project welcomes contributions developed with AI assistance. QuestMaster itself was built with the help of AI coding assistants, and we encourage the use of AI tools (like Cursor, GitHub Copilot, etc.) to enhance productivity and code quality. However, all contributions should be reviewed, tested, and understood before submission.
+
 ## Code of Conduct
 
 - Be respectful and inclusive

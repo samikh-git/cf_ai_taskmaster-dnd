@@ -370,3 +370,7 @@ kill -9 <PID>
 4. Review code comments
 5. Ask in team chat (if applicable)
 
+## AI-Assisted Development
+
+QuestMaster was developed with the assistance of AI coding assistants. Feel free to use AI tools (like Cursor, GitHub Copilot, etc.) when working on this project. The [AI Agent Guide](AGENTS.md) provides comprehensive guidance for AI assistants working with this codebase.
+

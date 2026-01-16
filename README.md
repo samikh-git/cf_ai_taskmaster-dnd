@@ -320,6 +320,10 @@ This project follows conventional commits and maintains comprehensive documentat
 
 Created by [samikh-git](https://github.com/samikh-git)
 
+**Note**: This project was developed with the assistance of AI coding assistants (Cursor AI and Gemini AI). AI was used for code generation, documentation, debugging, and architectural guidance throughout the development process.
+
 ## License
 
-Private project - all rights reserved.
+This project is licensed under the MIT License.
+
+See [LICENSE](LICENSE) for details.

@@ -15,6 +15,7 @@ Welcome to the QuestMaster documentation! This directory contains comprehensive 
 - **[Architecture Guide](ARCHITECTURE.md)** - System architecture, data flow, and design decisions
 - **[API Documentation](API.md)** - Complete API reference with examples
 - **[Caching Strategy](CACHING.md)** - When and how to use caching effectively
+- **[AI Agent Guide](AGENTS.md)** - Comprehensive guide for AI coding assistants
 - **[Deployment Guide](../design/DEPLOYMENT.md)** - Production deployment instructions
 
 ### Component Documentation
@@ -35,7 +36,8 @@ Welcome to the QuestMaster documentation! This directory contains comprehensive 
 1. **New to the project?** Start with [Development Guide](DEVELOPMENT.md)
 2. **Understanding the system?** Read [Architecture Guide](ARCHITECTURE.md)
 3. **Working on API?** Check [API Documentation](API.md)
-4. **Adding features?** See [Contributing Guide](../CONTRIBUTING.md)
+4. **Using AI assistants?** See [AI Agent Guide](AGENTS.md)
+5. **Adding features?** See [Contributing Guide](../CONTRIBUTING.md)
 
 ### For Users
 
@@ -56,6 +58,7 @@ docs/
 ├── README.md           # This file (documentation index)
 ├── ARCHITECTURE.md     # System architecture and design
 ├── API.md              # API reference documentation
+├── AGENTS.md           # AI agent guide for coding assistants
 ├── CACHING.md          # Caching strategy guide
 └── DEVELOPMENT.md     # Development guide
 
@@ -97,7 +100,19 @@ When making changes:
 - **Examples included** - Code examples where helpful
 - **Cross-referenced** - Links between related docs
 
+## AI-Assisted Development
+
+QuestMaster was developed with assistance from AI coding assistants (Cursor AI and Gemini AI). AI was used throughout the development process for:
+
+- Code generation and implementation
+- Architecture design and guidance
+- Documentation writing and maintenance
+- Debugging and problem-solving
+- Testing and validation
+
+The [AI Agent Guide](AGENTS.md) provides comprehensive documentation for AI assistants working on this codebase, reflecting the collaborative nature of this project.
+
 ---
 
-**Last Updated**: January 2025
+**Last Updated**: January 2026
 

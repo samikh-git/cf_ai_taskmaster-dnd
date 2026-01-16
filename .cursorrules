@@ -1,0 +1,179 @@
+# QuestMaster - Cursor AI Rules
+
+**Note**: This project was developed with significant assistance from AI coding assistants (including Cursor AI, GitHub Copilot, and similar tools). AI was used throughout the development process for code generation, architecture design, documentation, debugging, and feature implementation.
+
+## Project Overview
+
+QuestMaster is a D&D-themed task management application built with Cloudflare Workers (Durable Objects) and Next.js. The app transforms mundane tasks into epic quests with AI-powered storytelling, XP, levels, and streaks.
+
+## Architecture
+
+- **Agent** (`agent/`): Cloudflare Worker with Durable Object (`QuestMasterAgent`) that manages state and AI interactions
+- **Frontend** (`frontend/`): Next.js 15 app with React 19, deployed on Cloudflare Pages
+- **Communication**: Frontend proxies requests to Agent via API routes with signed authentication tokens
+
+## Tech Stack
+
+- **Backend**: Cloudflare Workers, Durable Objects, Cloudflare AI (`@cf/meta/llama-3.1-8b-instruct`)
+- **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS 4
+- **Auth**: NextAuth.js v4 with GitHub OAuth
+- **Language**: TypeScript (strict mode)
+
+## Code Style & Conventions
+
+### TypeScript
+- Use strict mode
+- Prefer interfaces over types for object shapes
+- Use explicit return types for functions
+- Avoid `any` - use `unknown` if needed
+- Use meaningful variable names
+
+### File Naming
+- Components: PascalCase (`TaskCard.tsx`)
+- Utilities: camelCase (`taskOperations.ts`)
+- Constants: UPPER_SNAKE_CASE (`XP_PER_LEVEL`)
+- Types/Interfaces: PascalCase (`Task`, `DMState`)
+
+### React
+- Use functional components with hooks
+- Prefer `useCallback` and `useMemo` for expensive operations
+- Keep components focused and small
+- Use lazy loading for modals and heavy components
+- Implement optimistic updates for better UX
+
+### Comments
+- Use JSDoc for functions
+- Explain "why" not "what"
+- Keep comments up to date with code
+
+## Key Patterns
+
+### Agent (Durable Object)
+- State stored in `DMState` interface (tasks, XP, streaks, history)
+- Tools defined in `tools.ts` and created via `createTools()`
+- Request routing: GET → `handleGetRequest()`, POST → `handlePostRequest()` or `handleChatRequest()`
+- Streaming responses via Server-Sent Events (SSE)
+- Automatic task cleanup using Durable Object Alarms
+
+### Frontend
+- API routes in `app/api/` proxy to agent with authentication
+- Custom hooks (`useTasks`, `useChat`, `useNotifications`) manage state
+- Optimistic updates: UI updates before API confirmation
+- Skeleton loading states for all async operations
+- Error boundaries and proper error handling
+
+### Authentication Flow
+1. User authenticates via NextAuth.js (GitHub OAuth)
+2. Frontend generates signed token (HMAC-SHA256) with session ID + timestamp
+3. Token sent to agent via `Authorization: Bearer {token}` header
+4. Agent validates token before processing requests
+5. Session ID extracted from URL path: `/agents/quest-master-agent/{sessionId}`
+
+## Important Files
+
+### Agent
+- `agent/src/agent.ts`: Main `QuestMasterAgent` class
+- `agent/src/index.ts`: Worker entry point, auth validation, rate limiting
+- `agent/src/tools.ts`: Tool definitions for AI model
+- `agent/src/system_prompt.ts`: AI system prompt (Tolkien-esque style)
+- `agent/src/handlers/`: Request handlers (chat, GET, POST)
+- `agent/src/utils/`: Utilities (auth, validation, streaming, streak calculation)
+
+### Frontend
+- `frontend/src/app/page.tsx`: Main chat interface
+- `frontend/src/app/api/agent/route.ts`: Agent API proxy with auth
+- `frontend/src/app/api/tasks/route.ts`: Tasks API proxy
+- `frontend/src/hooks/useTasks.ts`: Task state management
+- `frontend/src/hooks/useChat.ts`: Chat streaming logic
+- `frontend/src/components/TaskDashboard.tsx`: Task list component
+- `frontend/src/lib/auth-token.ts`: Token generation for agent auth
+
+## Security Considerations
+
+1. **Authentication**: All requests must include valid signed tokens
+2. **Rate Limiting**: Cloudflare Rate Limiting API (30/min chat, 60/min tasks)
+3. **Input Validation**: Server-side validation for all inputs
+4. **Prompt Injection**: Detection and mitigation in place
+5. **Session Security**: High-entropy session IDs (256 bits)
+
+## Common Tasks
+
+### Adding a New Tool
+1. Define tool in `agent/src/tools.ts`
+2. Implement function in `agent/src/agent.ts`
+3. Update system prompt if needed (`agent/src/system_prompt.ts`)
+4. Add validation in `agent/src/utils/validation.ts`
+5. Add tests in `agent/tests/`
+
+### Adding a New Frontend Feature
+1. Create component in `frontend/src/components/`
+2. Add page/route in `frontend/src/app/` if needed
+3. Create custom hook if state management needed
+4. Add types in `frontend/src/types/index.ts`
+5. Implement optimistic updates for better UX
+6. Add skeleton loading state
+
+### Modifying AI Behavior
+- Edit `agent/src/system_prompt.ts` for narrative style
+- Update tool descriptions in `agent/src/tools.ts`
+- Adjust validation in `agent/src/utils/validation.ts`
+
+## Testing
+
+- Agent tests: `agent/tests/` (Vitest)
+- Manual tests: `agent/tests/manual-*.js`
+- Frontend: Build check (`npm run build`) and type check (`npx tsc --noEmit`)
+
+## Performance
+
+- Lazy load modals and heavy components
+- Debounce search and auto-save operations
+- Use HTTP caching headers for GET requests
+- Memoize expensive computations
+- Optimistic updates for instant feedback
+
+## Environment Variables
+
+### Agent
+- `AUTH_SECRET`: Secret for token validation (must match `NEXTAUTH_SECRET`)
+
+### Frontend
+- `AGENT_URL`: Agent worker URL
+- `NEXTAUTH_SECRET`: NextAuth secret (must match `AUTH_SECRET`)
+- `GITHUB_CLIENT_ID`: GitHub OAuth client ID
+- `GITHUB_CLIENT_SECRET`: GitHub OAuth client secret
+
+## Documentation
+
+- `docs/ARCHITECTURE.md`: System architecture details
+- `docs/API.md`: API reference
+- `docs/DEVELOPMENT.md`: Development guide
+- `docs/CACHING.md`: Caching strategy
+
+## When Making Changes
+
+1. **Follow existing patterns** - Match the code style and structure
+2. **Update types** - Keep TypeScript types in sync
+3. **Add validation** - Validate inputs on the server side
+4. **Test thoroughly** - Test locally before committing
+5. **Update docs** - Keep documentation current
+6. **Consider security** - Validate auth, rate limit, sanitize inputs
+7. **Optimize UX** - Use optimistic updates, skeleton states, lazy loading
+
+## Common Gotchas
+
+- Session IDs are deterministic (same user = same ID) but high entropy
+- Tasks are stored in Durable Object state (SQLite), not external DB
+- Agent uses streaming responses (SSE) for chat
+- Frontend uses optimistic updates - rollback on error
+- Timezone handling: Frontend sends timezone header, agent stores it
+- Task cleanup: Automatic via Durable Object Alarms
+
+## AI Model Behavior
+
+- Model: `@cf/meta/llama-3.1-8b-instruct`
+- Style: Tolkien-esque fantasy prose (see `system_prompt.ts`)
+- Tools: Must use tools for task operations (createTask, viewTasks, etc.)
+- Narrative: Always provide narrative text alongside tool usage
+- XP: Dynamically determined by AI based on task complexity
+
