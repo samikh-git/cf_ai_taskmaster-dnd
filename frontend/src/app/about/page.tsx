@@ -99,7 +99,8 @@ export default function AboutPage() {
                 <p className="text-orange-200/90 leading-relaxed">
                   Experience points (XP) are dynamically assigned based on task complexity and difficulty. 
                   The AI Dungeon Master determines appropriate XP rewards, making more challenging quests 
-                  more rewarding. Complete your quests to level up your productivity!
+                  more rewarding. Level up every 100 XP and maintain daily completion streaks to earn 
+                  bonus rewards. View your progress, statistics, and quest history on your account page.
                 </p>
               </div>
             </div>
@@ -185,8 +186,10 @@ export default function AboutPage() {
                 <p className="text-orange-200/90 leading-relaxed">
                   The Next.js frontend provides a real-time chat interface that streams AI responses 
                   as they&apos;re generated. A collapsible dashboard displays all quests organized by 
-                  status (Active, Upcoming, Expired). The interface maintains session state using 
-                  localStorage and proxies requests to the agent through API routes to avoid CORS issues.
+                  status (Active, Upcoming, Expired). The interface includes an account page for tracking 
+                  XP, levels, and streaks, plus a history page for viewing completed quests and statistics. 
+                  Authentication is handled via NextAuth.js with GitHub OAuth, and requests are proxied 
+                  through API routes to avoid CORS issues.
                 </p>
               </div>
             </div>
@@ -214,9 +217,30 @@ export default function AboutPage() {
               </div>
 
               <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-4">
-                <h4 className="font-semibold text-orange-500 mb-2">Dynamic XP System</h4>
+                <h4 className="font-semibold text-orange-500 mb-2">XP & Leveling System</h4>
                 <p className="text-sm text-orange-200/90">
-                  Experience points are assigned based on task complexity, making challenging quests more rewarding.
+                  Earn experience points for completing quests. Level up every 100 XP and track your progress.
+                </p>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-4">
+                <h4 className="font-semibold text-orange-500 mb-2">Streak System</h4>
+                <p className="text-sm text-orange-200/90">
+                  Maintain daily completion streaks with grace days (1 per week). Earn bonus XP for 7+ day streaks.
+                </p>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-4">
+                <h4 className="font-semibold text-orange-500 mb-2">Quest History</h4>
+                <p className="text-sm text-orange-200/90">
+                  View all completed quests and detailed statistics including completion rates and average XP.
+                </p>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-4">
+                <h4 className="font-semibold text-orange-500 mb-2">Browser Notifications</h4>
+                <p className="text-sm text-orange-200/90">
+                  Get reminders for upcoming task deadlines directly in your browser.
                 </p>
               </div>
 
@@ -230,7 +254,14 @@ export default function AboutPage() {
               <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-4">
                 <h4 className="font-semibold text-orange-500 mb-2">Persistent State</h4>
                 <p className="text-sm text-orange-200/90">
-                  All quests are stored in Durable Object state, persisting across sessions and page refreshes.
+                  All quests, XP, and streaks are stored in Durable Object state, persisting across sessions.
+                </p>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-4">
+                <h4 className="font-semibold text-orange-500 mb-2">Timezone Support</h4>
+                <p className="text-sm text-orange-200/90">
+                  Accurate time handling based on your timezone for proper task scheduling and deadlines.
                 </p>
               </div>
 
@@ -238,6 +269,33 @@ export default function AboutPage() {
                 <h4 className="font-semibold text-orange-500 mb-2">Rate Limiting</h4>
                 <p className="text-sm text-orange-200/90">
                   Built-in rate limiting prevents API credit abuse while allowing normal usage patterns.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Account & Progress */}
+          <section className="space-y-6">
+            <h2 className="text-3xl font-bold text-orange-600 border-b border-orange-900/50 pb-2">
+              Track Your Adventure
+            </h2>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-6 space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">Account Page</h3>
+                <p className="text-orange-200/90 leading-relaxed">
+                  View your current level, XP progress, and completion streaks. Track your longest streak 
+                  and see how close you are to the next level. Earn bonus XP (10% extra) when you maintain 
+                  a 7+ day completion streak!
+                </p>
+              </div>
+
+              <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-6 space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">Quest History</h3>
+                <p className="text-orange-200/90 leading-relaxed">
+                  Review all your completed quests and view detailed statistics including total completions, 
+                  completion rate, average XP per quest, and recent activity. See how your productivity 
+                  journey has evolved over time.
                 </p>
               </div>
             </div>
@@ -258,10 +316,12 @@ export default function AboutPage() {
                 <div className="flex items-start gap-3">
                   <span className="text-orange-500 font-semibold min-w-[80px]">DM:</span>
                   <p className="text-orange-200/90 italic">
-                    &quot;Hail, traveler! I shall inscribe your quest into the ancient tome. Venture into the 
-                    depths of the Archive of Reports, where shadows of unfinished work lurk, and emerge 
-                    victorious with a completed tome. This quest shall grant you 50 experience points upon 
-                    completion...&quot;
+                    &quot;A new day dawns in the realm of productivity. The sun rises over the horizon, casting 
+                    a warm glow upon the landscape of tasks that lie before you. What quest shall you undertake 
+                    today? Shall you vanquish the beast of procrastination or conquer the mountain of paperwork? 
+                    Perhaps you shall embark on a perilous journey to the depths of the Archive of Reports, where 
+                    shadows of unfinished work lurk, and emerge victorious with a completed tome. This quest shall 
+                    grant you 50 experience points upon completion...&quot;
                   </p>
                 </div>
               </div>
@@ -305,7 +365,18 @@ export default function AboutPage() {
       {/* Footer */}
       <footer className="border-t border-orange-900/50 mt-16 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-orange-400/70">
-          <p>QuestMaster - Transform your productivity into an epic adventure</p>
+          <p className="mb-2">QuestMaster - Transform your productivity into an epic adventure</p>
+          <p>
+            Created by{' '}
+            <a
+              href="https://github.com/samikh-git"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-orange-500 hover:text-orange-400 underline transition-colors"
+            >
+              samikh-git
+            </a>
+          </p>
         </div>
       </footer>
     </div>

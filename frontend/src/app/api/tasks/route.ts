@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth.config';
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit';
 import { getUserIdForRateLimit } from '@/lib/get-user-id';
 import { generateUserSessionId, getUserIdFromSession } from '@/lib/session-utils';
+import { generateAuthToken } from '@/lib/auth-token';
+import { getAgentBaseUrl } from '@/constants';
 
 // Rate limit: 60 requests per minute per user (tasks are cheaper, allow more)
 const RATE_LIMIT_MAX_REQUESTS = 60;
@@ -11,10 +13,7 @@ const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 
 // Helper to get agent URL based on environment
 const getAgentUrl = (sessionId: string) => {
-  const agentBaseUrl = process.env.AGENT_URL || 
-    (process.env.NODE_ENV === 'production' 
-      ? 'https://agent.sami-houssaini.workers.dev'
-      : 'http://localhost:8787');
+  const agentBaseUrl = getAgentBaseUrl();
   return `${agentBaseUrl}/agents/quest-master-agent/${sessionId}`;
 };
 
@@ -69,12 +68,34 @@ export async function GET(request: NextRequest) {
   if (!sessionId || !rateLimitResult) return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 }); // Should not happen
 
   try {
-    const agentUrl = getAgentUrl(sessionId);
+    // Check if requesting history
+    const url = new URL(request.url);
+    const isHistoryRequest = url.searchParams.get('history') === 'true';
     
-    // Forward timezone header if provided
+    const agentUrl = isHistoryRequest 
+      ? `${getAgentUrl(sessionId)}?history=true`
+      : getAgentUrl(sessionId);
+    
+    // Generate authentication token for agent validation
+    let authToken: string;
+    try {
+      authToken = generateAuthToken(sessionId);
+    } catch (error) {
+      console.error('Error generating auth token:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to generate authentication token' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
+    // Forward timezone header and include auth token
     const timezoneHeader = request.headers.get('x-timezone');
     const fetchHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`,
     };
     if (timezoneHeader) {
       fetchHeaders['x-timezone'] = timezoneHeader;
@@ -94,9 +115,14 @@ export async function GET(request: NextRequest) {
 
     const data = await agentResponse.json();
     const rateLimitHeaders = getRateLimitHeaders(rateLimitResult);
+    
+    // Add HTTP caching headers for better performance
+    // Cache for 10 seconds (stale-while-revalidate for 60 seconds)
+    // This reduces server load while still keeping data relatively fresh
     return new Response(JSON.stringify(data), {
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=60',
         ...rateLimitHeaders,
       },
     });
@@ -115,7 +141,7 @@ export async function POST(request: NextRequest) {
   if (!sessionId || !rateLimitResult) return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 }); // Should not happen
 
   try {
-    const body = await request.json() as { tool?: string; params?: any };
+    const body = await request.json() as { tool?: string; params?: Record<string, unknown> };
     
     // Validate incoming request for manual task creation
     if (body.tool !== 'createTask' || !body.params) {
@@ -136,10 +162,26 @@ export async function POST(request: NextRequest) {
 
     const agentUrl = getAgentUrl(sessionId);
     
-    // Forward timezone header if provided
+    // Generate authentication token for agent validation
+    let authToken: string;
+    try {
+      authToken = generateAuthToken(sessionId);
+    } catch (error) {
+      console.error('Error generating auth token:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to generate authentication token' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
+    // Forward timezone header and include auth token
     const timezoneHeader = request.headers.get('x-timezone');
     const fetchHeaders: Record<string, string> = {
       'Content-Type': 'application/json', // Agent expects JSON for direct tool calls
+      'Authorization': `Bearer ${authToken}`,
     };
     if (timezoneHeader) {
       fetchHeaders['x-timezone'] = timezoneHeader;
@@ -182,7 +224,7 @@ export async function PATCH(request: NextRequest) {
   if (!sessionId || !rateLimitResult) return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });
 
   try {
-    const body = await request.json() as { tool?: string; params?: any };
+    const body = await request.json() as { tool?: string; params?: Record<string, unknown> };
     
     if (body.tool !== 'updateTask' || !body.params) {
       return new Response(
@@ -193,9 +235,25 @@ export async function PATCH(request: NextRequest) {
 
     const agentUrl = getAgentUrl(sessionId);
     
+    // Generate authentication token for agent validation
+    let authToken: string;
+    try {
+      authToken = generateAuthToken(sessionId);
+    } catch (error) {
+      console.error('Error generating auth token:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to generate authentication token' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
     const timezoneHeader = request.headers.get('x-timezone');
     const fetchHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`,
     };
     if (timezoneHeader) {
       fetchHeaders['x-timezone'] = timezoneHeader;
@@ -238,7 +296,7 @@ export async function DELETE(request: NextRequest) {
   if (!sessionId || !rateLimitResult) return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });
 
   try {
-    const body = await request.json() as { tool?: string; params?: any };
+    const body = await request.json() as { tool?: string; params?: Record<string, unknown> };
     
     if (body.tool !== 'deleteTask' || !body.params) {
       return new Response(
@@ -249,9 +307,25 @@ export async function DELETE(request: NextRequest) {
 
     const agentUrl = getAgentUrl(sessionId);
     
+    // Generate authentication token for agent validation
+    let authToken: string;
+    try {
+      authToken = generateAuthToken(sessionId);
+    } catch (error) {
+      console.error('Error generating auth token:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to generate authentication token' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
     const timezoneHeader = request.headers.get('x-timezone');
     const fetchHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`,
     };
     if (timezoneHeader) {
       fetchHeaders['x-timezone'] = timezoneHeader;

@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth.config';
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit';
 import { getUserIdForRateLimit } from '@/lib/get-user-id';
 import { generateUserSessionId, getUserIdFromSession } from '@/lib/session-utils';
+import { generateAuthToken } from '@/lib/auth-token';
+import { getAgentBaseUrl } from '@/constants';
 
 // Rate limit: 30 requests per minute per user (to prevent API credit abuse)
 const RATE_LIMIT_MAX_REQUESTS = 30;
@@ -61,17 +63,30 @@ export async function POST(request: NextRequest) {
     // Generate session ID server-side from authenticated user (ignore client-provided session ID)
     const sessionId = generateUserSessionId(userId);
     
+    // Generate authentication token for agent validation
+    let authToken: string;
+    try {
+      authToken = generateAuthToken(sessionId);
+    } catch (error) {
+      console.error('Error generating auth token:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to generate authentication token' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
     // Use environment variable or default based on NODE_ENV
-    const agentBaseUrl = process.env.AGENT_URL || 
-      (process.env.NODE_ENV === 'production' 
-        ? 'https://agent.sami-houssaini.workers.dev'
-        : 'http://localhost:8787');
+    const agentBaseUrl = getAgentBaseUrl();
     const agentUrl = `${agentBaseUrl}/agents/quest-master-agent/${sessionId}`;
     
-    // Forward timezone header if provided
+    // Forward timezone header and include auth token
     const timezoneHeader = request.headers.get('x-timezone');
     const fetchHeaders: Record<string, string> = {
       'Content-Type': 'text/plain',
+      'Authorization': `Bearer ${authToken}`,
     };
     if (timezoneHeader) {
       fetchHeaders['x-timezone'] = timezoneHeader;

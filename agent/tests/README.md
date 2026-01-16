@@ -7,7 +7,8 @@ This directory contains all testing-related files for the QuestMasterAgent.
 - `agent.test.ts` - Comprehensive test suite for agent tools and functionality
 - `index.test.ts` - Basic routing and HTTP endpoint tests
 - `vitest.config.js` - Vitest configuration file for Cloudflare Workers
-- `manual-test.js` - Manual WebSocket test script
+- `manual-test.js` - Manual HTTP test script
+- `manual-agent-test.js` - Comprehensive manual agent test script
 
 ## Running Tests
 
@@ -22,21 +23,20 @@ npm run test:agent
 This comprehensive manual test script will:
 1. Check if the dev server is running
 2. Test HTTP endpoint connectivity
-3. Test WebSocket connection
-4. Send test messages to verify:
+3. Send test messages to verify:
    - `getCurrentTime` tool usage
    - `createTask` tool usage
    - `viewTasks` tool usage
-5. Display received responses and task metadata
-6. Provide a test summary
+4. Display received responses and task metadata
+5. Provide a test summary
 
-**Test WebSocket Connection:**
+**Test HTTP Connection:**
 
 ```bash
 npm run test:manual
 ```
 
-This simpler script just tests basic WebSocket connectivity and message sending.
+This simpler script tests basic HTTP connectivity and message sending.
 
 ### Automated Tests (Vitest - Optional)
 
@@ -89,7 +89,7 @@ The test suite (`agent.test.ts`) covers:
 
 ### Manual Testing
 
-To run the manual WebSocket test script, first start the dev server:
+To run the manual test scripts, first start the dev server:
 
 ```bash
 npm run dev
@@ -99,13 +99,15 @@ Then in another terminal, run:
 
 ```bash
 npm run test:manual
+# or
+npm run test:agent
 ```
 
-The manual test script will:
-1. Connect to the QuestMasterAgent WebSocket endpoint
-2. Send a test message
+The manual test scripts will:
+1. Connect to the QuestMasterAgent HTTP endpoint
+2. Send test messages
 3. Display any responses
-4. Close after 10 seconds
+4. Show task metadata if tasks are created
 
 ## Test Architecture
 
@@ -117,3 +119,10 @@ Tests use `@cloudflare/vitest-pool-workers` which provides:
 
 Each test gets a fresh agent instance to ensure isolation. Tests use unique agent names based on timestamps to prevent state conflicts.
 
+## Testing Best Practices
+
+1. **Isolation**: Each test should use a unique session ID to avoid state conflicts
+2. **Cleanup**: Tests should clean up any created tasks or state
+3. **Async Handling**: All agent methods are async - use proper await syntax
+4. **Error Handling**: Test both success and error cases
+5. **Streaming**: For chat tests, handle SSE stream parsing correctly
