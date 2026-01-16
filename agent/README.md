@@ -8,7 +8,7 @@ The QuestMasterAgent is a Cloudflare Durable Object that acts as an AI Dungeon M
 
 ## Features
 
-- **AI-Powered Interactions**: Uses `@cf/meta/llama-3.1-8b-instruct` for natural language processing
+- **AI-Powered Interactions**: Uses `@cf/meta/llama-3.1-70b-instruct` for natural language processing
 - **Task Management**: Create, view, update, and delete tasks (quests) with fantasy descriptions
 - **Persistent State**: Tasks, XP, streaks, and history stored in Durable Object state (SQLite)
 - **Streaming Responses**: HTTP streaming with Server-Sent Events (SSE)
@@ -63,7 +63,12 @@ The agent provides tools for the AI model:
 
 1. **getCurrentTime**: Returns the current date/time in ISO 8601 format (respects user timezone)
 2. **createTask**: Creates a new task with name, description, start/end times, and XP
+   - Accepts natural language time descriptions (e.g., "1 hour from now", "tomorrow")
+   - Automatically parses relative time descriptions
+   - Validates all parameters with detailed error messages
+   - Supports retry logic for failed attempts
 3. **viewTasks**: Retrieves all active tasks from state
+4. **calculateTaskTimes**: Calculates start/end times from natural language descriptions (optional helper tool)
 
 ### State Management
 
@@ -296,6 +301,9 @@ The AI agent uses a custom system prompt (`src/system_prompt.ts`) that:
 - Requires narrative text responses alongside tool usage
 - Minimizes references to current time/date (uses getCurrentTime silently)
 - Includes security directives to resist prompt injection attempts
+- Provides explicit examples of correct tool usage
+- Includes retry instructions for failed task creation
+- Supports natural language time descriptions in createTask
 
 ## Task Cleanup
 

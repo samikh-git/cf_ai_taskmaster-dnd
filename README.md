@@ -58,10 +58,10 @@ questmaster/
 │   │   │   ├── chatHandler.ts
 │   │   │   └── requestHandlers.ts
 │   │   └── utils/           # Utility functions
-│   │       ├── serialization.ts
-│   │       ├── statistics.ts
-│   │       ├── streak.ts
-│   │       └── streaming.ts
+│   │       ├── auth.ts
+│   │       ├── validation.ts
+│   │       ├── streaming.ts
+│   │       └── ...
 │   ├── tests/                # Test files
 │   └── wrangler.jsonc        # Cloudflare Worker configuration
 ├── frontend/                 # Next.js web application
@@ -77,6 +77,14 @@ questmaster/
 │   │   ├── types/            # TypeScript types
 │   │   └── utils/            # Utility functions
 │   └── wrangler.jsonc        # Cloudflare Pages configuration
+├── docs/                     # Documentation
+│   ├── ARCHITECTURE.md      # System architecture
+│   ├── API.md               # API documentation
+│   └── DEVELOPMENT.md       # Development guide
+├── design/                   # Design documents
+│   ├── DEPLOYMENT.md        # Deployment guide
+│   ├── ENV_SETUP.md         # Environment setup
+│   └── ...
 └── README.md                 # This file
 ```
 
@@ -265,6 +273,16 @@ The frontend is a Next.js application that:
 - Manages authentication via NextAuth.js
 - Handles browser notifications for task reminders
 
+## Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System architecture and design decisions
+- **[API Documentation](docs/API.md)** - Complete API reference
+- **[Development Guide](docs/DEVELOPMENT.md)** - Setup and development workflow
+- **[Deployment Guide](design/DEPLOYMENT.md)** - Deployment instructions
+- **[Environment Setup](design/ENV_SETUP.md)** - Environment variable configuration
+
 ## Recent Updates
 
 ### Performance Improvements
@@ -280,14 +298,25 @@ The frontend is a Next.js application that:
 - **Expandable Search**: Quick-access search icon that expands when needed
 - **Smooth Animations**: Transition animations for search expansion and UI interactions
 
+### AI & Tool Calling Improvements
+- **Natural Language Time Parsing**: Accepts relative time descriptions (e.g., "1 hour from now", "tomorrow")
+- **Retry Logic**: Automatic retry with improved error messages for failed task creation
+- **Enhanced Error Messages**: Detailed guidance for the AI model to correct parameters
+- **Simplified Tool Workflow**: Reduced tool chaining for better reliability
+
 ### Security & Validation
 - **Input Validation**: Comprehensive server-side validation
 - **Prompt Injection Mitigation**: Multi-layered defense against prompt injection
 - **Enhanced Session Security**: Improved session ID generation with higher entropy
+- **Task Timing Validation**: Test suite for validating task creation with appropriate times
 
 ## Contributing
 
-This is a personal project. Feel free to fork and modify for your own use.
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+This project follows conventional commits and maintains comprehensive documentation.
+
+## Author
 
 Created by [samikh-git](https://github.com/samikh-git)
 
