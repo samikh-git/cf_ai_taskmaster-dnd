@@ -12,7 +12,7 @@ The application consists of:
 
 ### Live Demo
 
-Try the application online: **[https://frontend.sami-houssaini.workers.dev](https://frontend.sami-houssaini.workers.dev)**
+Try the application online: **[https://www.questmaster.work/](https://www.questmaster.work/)**
 
 ## Features
 
