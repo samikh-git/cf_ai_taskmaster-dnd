@@ -57,18 +57,68 @@ export async function handleChatRequest(
     
     logger.debug('User content:', userContent.substring(0, 200));
 
-    const answer = await runWithTools(
-        agent.env.AI,
-        '@cf/meta/llama-3.1-8b-instruct',
-        {
-            messages: [
-                { role: 'system', content: systemPromptDM },
-                { role: 'user', content: userContent },
-            ],
-            tools,
-        },
-        { streamFinalResponse: true }
-    );
+    // Track retry attempts for task creation
+    let retryCount = 0;
+    const maxRetries = 2; // Allow up to 2 retries (3 total attempts)
+    let messages: Array<{ role: string; content: string }> = [
+        { role: 'system', content: systemPromptDM },
+        { role: 'user', content: userContent },
+    ];
+
+    let answer;
+    let lastError: Error | null = null;
+
+    // Retry loop for task creation errors
+    while (retryCount <= maxRetries) {
+        try {
+            answer = await runWithTools(
+                agent.env.AI,
+                '@cf/meta/llama-3.1-70b-instruct', // Using 70B model for better tool calling reliability
+                {
+                    messages,
+                    tools,
+                },
+                { streamFinalResponse: true }
+            );
+            
+            // Success - break out of retry loop
+            break;
+        } catch (error: any) {
+            lastError = error;
+            const errorMessage = error?.message || String(error);
+            
+            // Check if this is a task creation error that we should retry
+            const isTaskCreationError = errorMessage.includes('Task creation failed') || 
+                                       errorMessage.includes('Task validation failed') ||
+                                       errorMessage.includes('Task parameter validation failed');
+            
+            if (isTaskCreationError && retryCount < maxRetries) {
+                retryCount++;
+                logger.warn(`Task creation failed, retrying (attempt ${retryCount + 1}/${maxRetries + 1}):`, errorMessage);
+                
+                // Add the error as a user message so the model can see what went wrong and retry
+                messages.push({
+                    role: 'assistant',
+                    content: `I encountered an error while creating the task. Let me try again with corrected parameters.`
+                });
+                messages.push({
+                    role: 'user',
+                    content: `The previous attempt failed with this error: ${errorMessage}\n\nPlease try creating the task again with corrected parameters.`
+                });
+                
+                // Reset created tasks for this retry
+                agent.createdTasksThisMessage = [];
+            } else {
+                // Not a retryable error or max retries reached - throw it
+                logger.error('Non-retryable error or max retries reached:', errorMessage);
+                throw error;
+            }
+        }
+    }
+
+    if (!answer && lastError) {
+        throw lastError;
+    }
 
     logger.taskOperation('created during runWithTools', agent.createdTasksThisMessage.length);
 

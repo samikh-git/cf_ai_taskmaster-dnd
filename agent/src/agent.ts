@@ -21,20 +21,9 @@ export class QuestMasterAgent extends Agent<Env, DMState> {
     };
 
     public createdTasksThisMessage: Task[] = [];
-    private _toolsCache: any[] | null = null;
 
     get TOOLS() {
-        // Cache tools array to avoid recreating on every access
-        // Only recreate if cache is null (first access or after reset)
-        if (this._toolsCache === null) {
-            this._toolsCache = createTools(this);
-        }
-        return this._toolsCache;
-    }
-
-    // Method to reset tools cache if needed (e.g., after agent state changes)
-    private resetToolsCache(): void {
-        this._toolsCache = null;
+        return createTools(this);
     }
     
     async onRequest(request: Request): Promise<Response> {
@@ -111,9 +100,36 @@ export class QuestMasterAgent extends Agent<Env, DMState> {
             XP = params.XP || params.xp || 0;
         }
         
-        // Validate all task parameters with strict validation
+        // Handle XP type conversion - convert string to number if needed
+        if (typeof XP === 'string') {
+            const parsedXP = parseInt(XP, 10);
+            if (!isNaN(parsedXP)) {
+                XP = parsedXP;
+                logger.debug('Converted XP from string to number:', { original: params.XP, converted: XP });
+            } else {
+                XP = 0;
+            }
+        }
+        
+        // Handle relative time descriptions - if times are not ISO 8601, try to parse them
         const currentState = await this.state;
         const currentTime = new Date();
+        
+        // Check if startTime looks like a relative description (not ISO 8601)
+        if (taskStartTime && !taskStartTime.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+            logger.debug('Parsing relative start time description:', taskStartTime);
+            const parsedStart = this.parseTimeDescription(taskStartTime, currentTime);
+            taskStartTime = parsedStart.toISOString();
+        }
+        
+        // Check if endTime looks like a relative description (not ISO 8601)
+        if (taskEndTime && !taskEndTime.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+            logger.debug('Parsing relative end time description:', taskEndTime);
+            const parsedEnd = this.parseTimeDescription(taskEndTime, currentTime);
+            taskEndTime = parsedEnd.toISOString();
+        }
+        
+        // Validate all task parameters with strict validation
         const validationResult = validateTaskParameters(
             {
                 taskName,
@@ -126,7 +142,29 @@ export class QuestMasterAgent extends Agent<Env, DMState> {
         );
         
         if (!validationResult.valid) {
-            const errorMessage = `Task validation failed: ${validationResult.errors.join('; ')}`;
+            // Create a detailed error message that helps the model correct its parameters
+            const errorDetails = validationResult.errors.map(err => {
+                // Provide specific guidance for common errors
+                if (err.includes('Invalid start time format')) {
+                    return `${err} Please provide either an ISO 8601 timestamp (e.g., "2026-01-16T14:00:00.000Z") or a natural language description (e.g., "1 hour from now", "tomorrow").`;
+                }
+                if (err.includes('Invalid end time format')) {
+                    return `${err} Please provide either an ISO 8601 timestamp (e.g., "2026-01-16T16:00:00.000Z") or a natural language description (e.g., "3 hours from now", "tomorrow afternoon").`;
+                }
+                if (err.includes('XP must be a number')) {
+                    return `${err} Please provide XP as a number (e.g., 50) not a string (not "50").`;
+                }
+                if (err.includes('Start time must be in the future')) {
+                    return `${err} Please calculate a future time. If you used a relative description, try something like "1 hour from now" or "tomorrow".`;
+                }
+                if (err.includes('End time must be after start time')) {
+                    return `${err} Make sure the end time is later than the start time.`;
+                }
+                return err;
+            }).join('\n');
+            
+            const errorMessage = `Task creation failed. Please correct the following errors and try again:\n${errorDetails}\n\nCurrent parameters:\n- taskName: "${taskName}"\n- taskStartTime: "${taskStartTime}"\n- taskEndTime: "${taskEndTime}"\n- XP: ${XP} (type: ${typeof XP})\n\nPlease call createTask again with corrected parameters.`;
+            
             logger.error('Task parameter validation failed:', {
                 errors: validationResult.errors,
                 params: { taskName, taskDescription, taskStartTime, taskEndTime, XP }
@@ -193,6 +231,115 @@ export class QuestMasterAgent extends Agent<Env, DMState> {
         
         // Fallback to UTC
         return now.toISOString();
+    }
+
+    async calculateTaskTimes(params: { 
+        startTimeDescription?: string; 
+        endTimeDescription?: string;
+        durationHours?: number;
+        durationMinutes?: number;
+    }): Promise<{ startTime: string; endTime: string }> {
+        logger.toolCall('calculateTaskTimes', params);
+        const currentState = await this.state;
+        const now = new Date();
+        
+        let startTime: Date;
+        let endTime: Date;
+        
+        // Parse start time description
+        if (params.startTimeDescription) {
+            startTime = this.parseTimeDescription(params.startTimeDescription, now);
+        } else {
+            // Default: start in 1 hour
+            startTime = new Date(now.getTime() + 60 * 60 * 1000);
+        }
+        
+        // Parse end time description or calculate from duration
+        if (params.endTimeDescription) {
+            endTime = this.parseTimeDescription(params.endTimeDescription, now);
+        } else if (params.durationHours || params.durationMinutes) {
+            const durationMs = (params.durationHours || 0) * 60 * 60 * 1000 + 
+                             (params.durationMinutes || 0) * 60 * 1000;
+            endTime = new Date(startTime.getTime() + durationMs);
+        } else {
+            // Default: end 2 hours after start
+            endTime = new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
+        }
+        
+        // Ensure end time is after start time
+        if (endTime <= startTime) {
+            endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Default to 1 hour duration
+        }
+        
+        // Ensure start time is in the future
+        if (startTime <= now) {
+            startTime = new Date(now.getTime() + 60 * 60 * 1000); // Default to 1 hour from now
+        }
+        
+        return {
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+        };
+    }
+
+    private parseTimeDescription(description: string, referenceTime: Date): Date {
+        const desc = description.toLowerCase().trim();
+        const now = referenceTime;
+        
+        // Handle "now" or "immediately"
+        if (desc === 'now' || desc === 'immediately' || desc === 'asap') {
+            return new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now (minimum)
+        }
+        
+        // Handle relative hours: "1 hour", "2 hours", "in 3 hours"
+        const hourMatch = desc.match(/(?:in\s+)?(\d+)\s+hour(?:s)?/);
+        if (hourMatch) {
+            const hours = parseInt(hourMatch[1], 10);
+            return new Date(now.getTime() + hours * 60 * 60 * 1000);
+        }
+        
+        // Handle relative minutes: "30 minutes", "in 15 minutes"
+        const minuteMatch = desc.match(/(?:in\s+)?(\d+)\s+minute(?:s)?/);
+        if (minuteMatch) {
+            const minutes = parseInt(minuteMatch[1], 10);
+            return new Date(now.getTime() + minutes * 60 * 1000);
+        }
+        
+        // Handle "tomorrow"
+        if (desc.includes('tomorrow')) {
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(12, 0, 0, 0); // Default to noon
+            return tomorrow;
+        }
+        
+        // Handle "next week"
+        if (desc.includes('next week')) {
+            const nextWeek = new Date(now);
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            nextWeek.setHours(9, 0, 0, 0); // Default to 9 AM
+            return nextWeek;
+        }
+        
+        // Handle "today"
+        if (desc.includes('today')) {
+            const today = new Date(now);
+            today.setHours(now.getHours() + 2, 0, 0, 0); // 2 hours from now
+            return today;
+        }
+        
+        // Try to parse as ISO 8601
+        try {
+            const parsed = new Date(description);
+            if (!isNaN(parsed.getTime())) {
+                return parsed;
+            }
+        } catch {
+            // Ignore
+        }
+        
+        // Default: 1 hour from now
+        return new Date(now.getTime() + 60 * 60 * 1000);
     }
 
     async viewTasks() {

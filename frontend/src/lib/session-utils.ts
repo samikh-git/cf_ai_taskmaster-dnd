@@ -45,18 +45,20 @@ export function generateUserSessionId(userId: string): string {
   return `qm_${base64url}`;
 }
 
-import { Session, SessionUser } from '@/types';
+import type { Session as NextAuthSession } from 'next-auth';
 
 /**
  * Extract user ID from NextAuth session
+ * Accepts NextAuth's Session type which may have user as undefined
  */
-export function getUserIdFromSession(session: Session | null): string | null {
+export function getUserIdFromSession(session: NextAuthSession | null | undefined): string | null {
   if (!session?.user) {
     return null;
   }
 
   // Try to get user ID in order of preference
-  const user = session.user as SessionUser;
+  // Type assertion is safe here because we've already checked session?.user exists
+  const user = session.user as { id?: string; email?: string | null; name?: string | null };
   const userId = user.id || 
                  user.email || 
                  user.name;

@@ -17,7 +17,7 @@ export async function extendTask(
   const newEndTime = new Date(end.getTime() + extension);
 
   // Optimistic update
-  const optimisticUpdate = { endTime: newEndTime };
+  const optimisticUpdate = { endTime: newEndTime.toISOString() };
   callbacks?.onOptimisticUpdate?.(optimisticUpdate);
 
   try {
@@ -189,8 +189,8 @@ export async function createTask(
     id: `temp-${Date.now()}-${Math.random()}`,
     name: taskData.taskName,
     description: taskData.taskDescription,
-    startTime: new Date(taskData.taskStartTime),
-    endTime: new Date(taskData.taskEndTime),
+    startTime: taskData.taskStartTime,
+    endTime: taskData.taskEndTime,
     XP: taskData.XP,
   };
 

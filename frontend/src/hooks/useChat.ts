@@ -75,8 +75,9 @@ export function useChat(options?: UseChatOptions) {
         // Handle validation errors from backend
         if (response.status === 400) {
           try {
-            const errorData = await response.json();
-            setValidationError(errorData.error || 'Invalid input. Please check your message.');
+            const errorData = await response.json() as { error?: string };
+            const errorMessage = errorData.error || 'Invalid input. Please check your message.';
+            setValidationError(errorMessage);
             setMessages(prev => prev.map(msg => 
               msg.id === assistantMessageId 
                 ? { ...msg, content: msg.content + `\n\n[Error: ${errorData.error || 'Invalid input'}]` }

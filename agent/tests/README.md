@@ -9,6 +9,7 @@ This directory contains all testing-related files for the QuestMasterAgent.
 - `vitest.config.js` - Vitest configuration file for Cloudflare Workers
 - `manual-test.js` - Manual HTTP test script
 - `manual-agent-test.js` - Comprehensive manual agent test script
+- `task-timing-test.js` - Task timing validation test suite
 
 ## Running Tests
 
@@ -37,6 +38,20 @@ npm run test:manual
 ```
 
 This simpler script tests basic HTTP connectivity and message sending.
+
+**Test Task Timing Validation:**
+
+```bash
+npm run test:timing
+```
+
+This test suite validates that tasks are created with appropriate times:
+- Verifies start times are in the future
+- Verifies end times are after start times
+- Validates ISO 8601 timestamp formats
+- Tests natural language time parsing (e.g., "tomorrow", "next week", "in 3 hours")
+- Checks for reasonable task durations
+- Validates explicit timestamp handling
 
 ### Automated Tests (Vitest - Optional)
 

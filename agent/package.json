@@ -9,7 +9,8 @@
 		"cf-typegen": "wrangler types",
 		"test": "vitest --config tests/vitest.config.js",
 		"test:manual": "node tests/manual-test.js",
-		"test:agent": "node tests/manual-agent-test.js"
+		"test:agent": "node tests/manual-agent-test.js",
+		"test:timing": "node tests/task-timing-test.js"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.12.1",

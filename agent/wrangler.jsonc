@@ -1,28 +1,14 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"ai": {
-    	"binding": "AI"
-    },
+		"binding": "AI"
+	},
 	"name": "agent",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-09-27",
-	"compatibility_flags": ["nodejs_compat", "durable_object_alarms"],
-	"migrations": [
-		{
-			"new_sqlite_classes": [
-				"QuestMasterAgent"
-			],
-			"tag": "v1"
-		},
-		{
-			"renamed_classes": [
-				{
-					"from": "TaskMasterAgent",
-					"to": "QuestMasterAgent"
-				}
-			],
-			"tag": "v2"
-		}
+	"compatibility_flags": [
+		"nodejs_compat",
+		"durable_object_alarms"
 	],
 	"durable_objects": {
 		"bindings": [
@@ -32,6 +18,7 @@
 			}
 		]
 	},
+	"migrations": [],
 	"ratelimits": [
 		{
 			"name": "CHAT_RATE_LIMITER",
@@ -52,5 +39,13 @@
 	],
 	"observability": {
 		"enabled": true
+	},
+	"vars": {
+		"AGENT_URL": "https://agent.sami-houssaini.workers.dev",
+		"AUTH_SECRET": "EJVRI2yGmFiu7hApkCUefTCcU74d6zyyfROtBq2PiswbC13/UDNr3HwP9X8gN4XPJ2uAy/zkDDNKdfLHyeQ0TCJs2SzPS8xqcu0FCu1lxoaTZokwBtTvLkoQtldGVWihuqD/U51wxi6kOI0qctlOndI+RHSVUUWwOBfw12wKBbstwDnuRUf7PFJ5j9vFniQIGRaLtlPoZnBNY74JErg9J5j524E3fVAPC72+MA+E4FIyeG8jmMTLWd/hq9sCzKQcHGH3rquL0H+gUxMHRlRQ/I1j+bloP95Aiae+ihZNdNxLgyZQeLPNpcJZn+vTV1aQhHfqoG3U25frLs0ddb5wjRafy4K/E/qkFZAmaRpYGxQUc8vnvarqg5VnfXx0quENnB38Ljx/zvaXS66p1V5pXhi1MSzWJZWBi078o+6Phn+7oRFeFRl0/cLY1JuHgN2/AoHtgPYXOOO0sW10hKpp5/MYA/zDK9O9Q6RLlJp7JsJ/huBfJ/peayOmoOZv/BnTUo/bRTyDdn583cKmlKB3xCqT1nlrGvi637tYoodL+j7vCslNv1X1SzX16upJ8JpzH+Orurod+rPTn8/UVt3lwTlePBHep/5Dyy4yU2M2oAhpHXHOBOliEpOwzDjWdpFue0dnaPZn1fRaf7yfPE0UYMOVoBXgf4l6OCx7a6VykU+zrNEpq5/EjPd1Z2WOD0HFs4n61uEagOlfozL6jipVEUROZcFQuVcfIQqYyHk+t5ngPqJ6lSltG4iXIIV5qcITUHOOpTbSUwXxLFZtuX38uOe0riz63sAuNS2YHfi6d4gMznt/iiyh9v+mUyTNZosUS+sbh1reDc4KYytaUDJtPuo/yup76rLbA16nQ4tVKf28RKCgm4QBXGCdFF8gCAbdn72nsRRMK+tCTa2IkXEPwSUmQYoFDVpU3D1bOlo541u/TAV+VQfRQkx6UH8/wXQAvGljaGaN9JzJ/VoNF5bqeHwvtp0ZGPOw6QoHGtO9yYnlsdJpZ0iv61ezUacjxh2E/7XkylmNr3HnHJGLP2QvlnYIPQ",
+		"AUTH_URL": "https://frontend.sami-houssaini.workers.dev/",
+		"GITHUB_CLIENT_ID": "Ov23linjiTP9zTeczfEe",
+		"GITHUB_CLIENT_SECRET": "4175ef211eb6d8a5df9e88314d936ec9c65e7801",
+		"NEXTAUTH_URL": "https://frontend.sami-houssaini.workers.dev/"
 	}
 }

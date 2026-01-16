@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { AccountPageSkeleton } from '@/components/Skeletons';
 
 export default function AccountPage() {
@@ -107,9 +108,11 @@ export default function AccountPage() {
           <div className="mb-8">
             <div className="flex items-center gap-4 mb-4">
               {session.user?.image && (
-                <img
+                <Image
                   src={session.user.image}
                   alt={session.user.name || 'User'}
+                  width={64}
+                  height={64}
                   className="w-16 h-16 rounded-full border-2 border-orange-900"
                 />
               )}

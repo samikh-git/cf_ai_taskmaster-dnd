@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Task, Session } from '@/types';
+import { Task } from '@/types';
 import { REMINDER_TIME_MS, NOTIFICATION_CHECK_INTERVAL_MS } from '@/constants';
+import type { Session } from 'next-auth';
 
 export function useNotifications(session: Session | null, tasks: Task[]) {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');

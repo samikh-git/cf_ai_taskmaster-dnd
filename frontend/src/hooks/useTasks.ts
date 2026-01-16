@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Task, Session } from '@/types';
+import { Task } from '@/types';
 import { AUTO_DELETE_THRESHOLD_MS } from '@/constants';
 import { debounce } from '@/utils/debounce';
+import type { Session } from 'next-auth';
 
 export function useTasks(session: Session | null) {
   const [tasks, setTasks] = useState<Task[]>([]);
