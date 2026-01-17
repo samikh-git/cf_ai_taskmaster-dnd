@@ -3,7 +3,7 @@ import { Task } from '@/types';
 import { REMINDER_TIME_MS, NOTIFICATION_CHECK_INTERVAL_MS } from '@/constants';
 import type { Session } from 'next-auth';
 
-export function useNotifications(session: Session | null, tasks: Task[]) {
+export function useNotifications(session: Session | null, tasks: Task[], onError?: (message: string) => void) {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const sentNotificationsRef = useRef<Set<string>>(new Set());
 
@@ -65,7 +65,7 @@ export function useNotifications(session: Session | null, tasks: Task[]) {
       const permission = await Notification.requestPermission();
       setNotificationPermission(permission);
     } else if (Notification.permission === 'denied') {
-      alert('Notifications are blocked. Please enable them in your browser settings.');
+      onError?.('Notifications are blocked. Please enable them in your browser settings.');
     }
   };
 

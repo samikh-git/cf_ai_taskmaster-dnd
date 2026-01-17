@@ -36,6 +36,7 @@ export interface CompletedQuest {
     endTime: Date;
     completionDate: Date;
     XP: number;
+    completionNarrative?: string;
 }
 
 export interface StreakData {

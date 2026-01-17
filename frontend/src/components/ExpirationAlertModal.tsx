@@ -5,9 +5,9 @@ import { Task } from '@/types';
 
 interface ExpirationAlertModalProps {
   task: Task;
-  onExtend: () => Promise<boolean>;
-  onFinish: () => Promise<boolean>;
-  onAbandon: () => Promise<boolean>;
+  onExtend: () => Promise<void>;
+  onFinish: () => Promise<void>;
+  onAbandon: () => Promise<void>;
   onClose: () => void;
 }
 

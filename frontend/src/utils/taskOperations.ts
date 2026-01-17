@@ -3,6 +3,7 @@ import { Task } from '@/types';
 export interface OptimisticUpdateCallbacks {
   onOptimisticUpdate?: (updates: Partial<Task>) => void;
   onRollback?: () => void;
+  onError?: (message: string) => void;
 }
 
 export async function extendTask(
@@ -45,7 +46,8 @@ export async function extendTask(
       callbacks?.onRollback?.();
       const errorData = await response.json() as { error?: string };
       console.error('Error extending task:', errorData.error);
-      alert(`Failed to extend task: ${errorData.error || 'Unknown error'}`);
+      const errorMsg = `Failed to extend task: ${errorData.error || 'Unknown error'}`;
+      callbacks?.onError?.(errorMsg);
       return false;
     }
 
@@ -54,7 +56,8 @@ export async function extendTask(
     // Rollback on error
     callbacks?.onRollback?.();
     console.error('Error extending task:', error);
-    alert(`Failed to extend task: ${(error as Error).message}`);
+    const errorMsg = `Failed to extend task: ${(error as Error).message}`;
+    callbacks?.onError?.(errorMsg);
     return false;
   }
 }
@@ -64,6 +67,8 @@ export interface FinishTaskCallbacks {
   onOptimisticXP?: (xp: number) => void;
   onRollback?: () => void;
   onRollbackXP?: () => void;
+  onError?: (message: string) => void;
+  onNarrative?: (narrative: string, xpEarned: number) => void;
 }
 
 export async function finishTask(
@@ -101,25 +106,38 @@ export async function finishTask(
       callbacks?.onRollbackXP?.();
       const errorData = await response.json() as { error?: string };
       console.error('Error finishing task:', errorData.error);
-      alert(`Failed to finish task: ${errorData.error || 'Unknown error'}`);
+      const errorMsg = `Failed to finish task: ${errorData.error || 'Unknown error'}`;
+      callbacks?.onError?.(errorMsg);
       return false;
     }
 
-    alert(`Quest "${task.name}" completed! You earned ${task.XP} XP.`);
+    const responseData = await response.json() as { success?: boolean; narrative?: string; xpEarned?: number };
+    const narrative = responseData.narrative || `The quest "${task.name}" has been completed!`;
+    const xpEarned = responseData.xpEarned || task.XP;
+    
+    // Show narrative if provided
+    if (narrative) {
+      callbacks?.onNarrative?.(narrative, xpEarned);
+    }
+
     return true;
   } catch (error: unknown) {
     // Rollback on error
     callbacks?.onRollback?.();
     callbacks?.onRollbackXP?.();
     console.error('Error finishing task:', error);
-    alert(`Failed to finish task: ${(error as Error).message}`);
+    const errorMsg = `Failed to finish task: ${(error as Error).message}`;
+    callbacks?.onError?.(errorMsg);
     return false;
   }
 }
 
 export interface AbandonTaskCallbacks {
   onOptimisticDelete?: () => void;
+  onOptimisticXP?: (xpDelta: number) => void;
   onRollback?: () => void;
+  onRollbackXP?: () => void;
+  onError?: (message: string) => void;
 }
 
 export async function abandonTask(
@@ -127,8 +145,12 @@ export async function abandonTask(
   userTimezone: string | null,
   callbacks?: AbandonTaskCallbacks
 ): Promise<boolean> {
-  // Optimistic update
+  // Calculate penalty: 50% of task XP
+  const penaltyXP = Math.floor(task.XP * 0.5);
+  
+  // Optimistic updates
   callbacks?.onOptimisticDelete?.();
+  callbacks?.onOptimisticXP?.(-penaltyXP); // Subtract XP
 
   try {
     const headers: Record<string, string> = {
@@ -152,9 +174,11 @@ export async function abandonTask(
     if (!response.ok) {
       // Rollback on error
       callbacks?.onRollback?.();
+      callbacks?.onRollbackXP?.();
       const errorData = await response.json() as { error?: string };
       console.error('Error deleting task:', errorData.error);
-      alert(`Failed to delete task: ${errorData.error || 'Unknown error'}`);
+      const errorMsg = `Failed to delete task: ${errorData.error || 'Unknown error'}`;
+      callbacks?.onError?.(errorMsg);
       return false;
     }
 
@@ -162,8 +186,10 @@ export async function abandonTask(
   } catch (error: unknown) {
     // Rollback on error
     callbacks?.onRollback?.();
+    callbacks?.onRollbackXP?.();
     console.error('Error deleting task:', error);
-    alert(`Failed to delete task: ${(error as Error).message}`);
+    const errorMsg = `Failed to delete task: ${(error as Error).message}`;
+    callbacks?.onError?.(errorMsg);
     return false;
   }
 }
@@ -171,6 +197,7 @@ export async function abandonTask(
 export interface CreateTaskCallbacks {
   onOptimisticAdd?: (task: Task) => void;
   onRollback?: () => void;
+  onError?: (message: string) => void;
 }
 
 export async function createTask(
@@ -225,7 +252,7 @@ export async function createTask(
         callbacks?.onRollback?.();
         const errorMsg = result.error || 'Task creation failed';
         console.error('Task creation failed:', errorMsg);
-        alert(`Failed to create task: ${errorMsg}`);
+        callbacks?.onError?.(`Failed to create task: ${errorMsg}`);
         return false;
       }
     } else {
@@ -234,7 +261,7 @@ export async function createTask(
       const error = await response.json() as { error?: string };
       const errorMsg = error.error || `HTTP ${response.status}: ${response.statusText}`;
       console.error('Error creating task:', errorMsg);
-      alert(`Failed to create task: ${errorMsg}`);
+      callbacks?.onError?.(`Failed to create task: ${errorMsg}`);
       return false;
     }
   } catch (error: unknown) {
@@ -242,7 +269,7 @@ export async function createTask(
     callbacks?.onRollback?.();
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error creating task:', error);
-    alert(`Failed to create task: ${errorMsg}`);
+    callbacks?.onError?.(`Failed to create task: ${errorMsg}`);
     return false;
   }
 }

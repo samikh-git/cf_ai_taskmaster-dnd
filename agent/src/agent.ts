@@ -6,6 +6,7 @@ import { handleGetRequest, handlePostRequest } from "./handlers/requestHandlers"
 import { handleChatRequest } from "./handlers/chatHandler";
 import { calculateStreak } from "./utils/streak";
 import { validateTaskParameters } from "./utils/validation";
+import { systemPromptDM } from "./system_prompt";
 
 export class QuestMasterAgent extends Agent<Env, DMState> {
     initialState: DMState = {
@@ -82,6 +83,9 @@ export class QuestMasterAgent extends Agent<Env, DMState> {
             taskStartTime = params.taskStartTime;
             taskEndTime = params.taskEndTime;
             XP = params.XP;
+            
+            // Log XP value for debugging
+            logger.debug('createTask - XP from params:', { XP, type: typeof XP, raw: params.XP });
         } else if (params && typeof params === 'object' && 'taskName' in params && typeof params.taskName === 'object') {
             // Incorrect structure - all params nested in taskName
             logger.debug('Detected incorrect parameter structure, extracting from nested object...');
@@ -107,6 +111,24 @@ export class QuestMasterAgent extends Agent<Env, DMState> {
                 XP = parsedXP;
                 logger.debug('Converted XP from string to number:', { original: params.XP, converted: XP });
             } else {
+                logger.warn('Invalid XP string value, defaulting to 0:', params.XP);
+                XP = 0;
+            }
+        }
+        
+        // Ensure XP is a number and not undefined/null (should have been caught above, but double-check)
+        if (XP === undefined || XP === null || (typeof XP !== 'number' && typeof XP !== 'string')) {
+            logger.warn('XP is undefined/null or invalid type, defaulting to 0:', { XP, type: typeof XP, params: params.XP });
+            XP = 0;
+        }
+        
+        // Final conversion to number if it's still a string (shouldn't happen after above check, but be safe)
+        if (typeof XP === 'string') {
+            const parsed = Number(XP);
+            if (!isNaN(parsed)) {
+                XP = parsed;
+            } else {
+                logger.warn('XP could not be converted to number, defaulting to 0:', XP);
                 XP = 0;
             }
         }
@@ -181,6 +203,9 @@ export class QuestMasterAgent extends Agent<Env, DMState> {
                 endTime: new Date(taskEndTime),
                 XP: XP,
             };
+            
+            // Log task creation with XP value for debugging
+            logger.info('createTask - Creating task with XP:', { taskName: newTask.name, XP: newTask.XP });
             
             const updatedState = {
                 ...currentState,
@@ -407,6 +432,7 @@ export class QuestMasterAgent extends Agent<Env, DMState> {
             
             // Calculate streak bonus (10% bonus for 7+ day streak)
             const baseXP = taskToDelete.XP;
+            logger.info('deleteTask - Task XP value:', { taskId: taskToDelete.id, taskName: taskToDelete.name, XP: taskToDelete.XP, baseXP });
             if (streakData.currentStreak >= 7) {
                 streakBonus = Math.floor(baseXP * 0.1);
                 logger.info(`Streak bonus: +${streakBonus} XP (${streakData.currentStreak} day streak)`);
@@ -416,10 +442,29 @@ export class QuestMasterAgent extends Agent<Env, DMState> {
             newTotalXP += totalXPForQuest;
             logger.info(`Added ${baseXP} XP (+${streakBonus} streak bonus). New total: ${newTotalXP}`);
             
-            // Move task to completed quests history
+            // Generate completion narrative BEFORE adding to completed quests
+            // Pass recent previous narratives to build a coherent story
+            const recentNarratives = (currentState.completedQuests || [])
+                .slice(-5) // Get last 5 completed quests for context
+                .filter(q => q.completionNarrative)
+                .map(q => ({
+                    quest: q.name,
+                    narrative: q.completionNarrative!,
+                }));
+            
+            const narrative = await this.generateCompletionNarrative(
+                taskToDelete, 
+                totalXPForQuest, 
+                streakBonus,
+                recentNarratives
+            );
+            logger.info(`Generated completion narrative for "${taskToDelete.name}"`);
+            
+            // Move task to completed quests history with narrative
             const completedQuest: CompletedQuest = {
                 ...taskToDelete,
                 completionDate: completionDate,
+                completionNarrative: narrative,
             };
             updatedCompletedQuests.push(completedQuest);
             logger.info(`Moved quest "${taskToDelete.name}" to completed quests history`);
@@ -435,17 +480,116 @@ export class QuestMasterAgent extends Agent<Env, DMState> {
                 graceDaysUsedThisWeek: streakData.graceDaysUsedThisWeek,
                 lastGraceWeekReset: streakData.lastGraceWeekReset,
             });
+
+            // Reschedule cleanup alarm
+            await this.scheduleNextCleanupAlarm();
+            
+            logger.taskOperation('deleted', 1);
+            
+            return { narrative, xpEarned: totalXPForQuest };
         } else {
+            // Abandoning a task: subtract 50% of the task's XP as a penalty
+            const penaltyXP = Math.floor(taskToDelete.XP * 0.5);
+            newTotalXP = Math.max(0, currentState.totalXP - penaltyXP); // Ensure XP doesn't go below 0
+            logger.info(`Abandoning quest "${taskToDelete.name}" - Penalty: -${penaltyXP} XP (50% of ${taskToDelete.XP} XP). New total: ${newTotalXP}`);
+            
             await this.setState({
                 ...currentState,
                 tasks: updatedTasks,
+                totalXP: newTotalXP,
             });
+            
+            // Reschedule cleanup alarm
+            await this.scheduleNextCleanupAlarm();
+            
+            logger.taskOperation('deleted', 1);
+            
+            return {};
         }
-        
-        // Reschedule cleanup alarm
-        await this.scheduleNextCleanupAlarm();
-        
-        logger.taskOperation('deleted', 1);
+    }
+
+    /**
+     * Generate a completion narrative for a finished quest using AI
+     * Builds on previous narratives to create a coherent ongoing story
+     */
+    private async generateCompletionNarrative(
+        task: Task, 
+        xpEarned: number, 
+        streakBonus: number,
+        previousNarratives: Array<{ quest: string; narrative: string }> = []
+    ): Promise<string> {
+        try {
+            let contextSection = '';
+            if (previousNarratives.length > 0) {
+                contextSection = `\n\nPrevious Quest Chronicles (for context and story continuity):\n${previousNarratives.map((prev, idx) => 
+                    `${idx + 1}. "${prev.quest}": ${prev.narrative}`
+                ).join('\n')}\n\n`;
+            }
+
+            const prompt = `You are a Dungeon Master chronicling an adventurer's epic journey. Write a short, immersive story (2-4 sentences) that gamifies the completion of this quest. This should be a mini-adventure narrative, not just a description. Make it exciting and engaging!
+
+${contextSection ? `IMPORTANT: Build on the previous quest narratives above to create a coherent, ongoing story. Reference or connect to previous adventures when natural, showing the adventurer's evolving journey. ` : ''}
+
+Current Quest:
+- Name: "${task.name}"
+- Description: "${task.description}"
+- Experience Gained: ${xpEarned} XP${streakBonus > 0 ? ` (including ${streakBonus} XP streak bonus)` : ''}
+
+Write a short story that gamifies this task completion - make it feel like a real quest adventure! Show what happened during the quest, not just that it was completed. Use action, description, and narrative flow to make it engaging. Write in an epic, Tolkien-esque fantasy style.`;
+
+            const response = await this.env.AI.run('@cf/meta/llama-3.1-8b-instruct' as any, {
+                messages: [
+                    { role: 'system', content: systemPromptDM },
+                    { role: 'user', content: prompt },
+                ],
+            });
+
+            // Extract the text response from AI.run response
+            let narrative = '';
+            
+            // AI.run typically returns an object with a 'response' property or similar
+            const responseData = response as any;
+            
+            if (responseData && typeof responseData === 'object') {
+                // Try common response formats
+                if (responseData.response) {
+                    narrative = String(responseData.response).trim();
+                } else if (responseData.text) {
+                    narrative = String(responseData.text).trim();
+                } else if (responseData.content) {
+                    narrative = String(responseData.content).trim();
+                } else if (responseData.message?.content) {
+                    narrative = String(responseData.message.content).trim();
+                } else if (responseData.choices?.[0]?.message?.content) {
+                    narrative = String(responseData.choices[0].message.content).trim();
+                }
+            } else if (typeof responseData === 'string') {
+                narrative = responseData.trim();
+            }
+
+            // Clean up the narrative - remove quotes if wrapped
+            if (narrative.startsWith('"') && narrative.endsWith('"')) {
+                narrative = narrative.slice(1, -1);
+            }
+            if (narrative.startsWith("'") && narrative.endsWith("'")) {
+                narrative = narrative.slice(1, -1);
+            }
+
+            // If no narrative was extracted, log and provide a default
+            if (!narrative || narrative.trim().length === 0) {
+                logger.warn('Failed to extract narrative from AI response, using default');
+                logger.debug('Response data:', JSON.stringify(responseData).substring(0, 200));
+                narrative = `The quest "${task.name}" has been completed! The adventurer's valor and determination have been rewarded with ${xpEarned} experience points.`;
+            } else {
+                logger.info('Successfully extracted narrative:', narrative.substring(0, 100));
+            }
+
+            return narrative.trim();
+        } catch (error) {
+            logger.error('Error generating completion narrative:', error);
+            // Return a default narrative if AI generation fails
+            return `The quest "${task.name}" has been completed! The adventurer's valor and determination have been rewarded with ${xpEarned} experience points.`;
+        }
     }
 
     /**

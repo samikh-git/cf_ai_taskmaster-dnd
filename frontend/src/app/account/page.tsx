@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { AccountPageSkeleton } from '@/components/Skeletons';
+import { XP_PER_LEVEL } from '@/constants';
 
 export default function AccountPage() {
   const { data: session, status } = useSession();
@@ -58,11 +59,11 @@ export default function AccountPage() {
     }
   };
 
-  // Calculate level (level up every 100 XP, starting at level 1)
-  const level = Math.floor(totalXP / 100) + 1;
-  const xpInCurrentLevel = totalXP % 100;
-  const xpNeededForNextLevel = 100 - xpInCurrentLevel;
-  const progressPercentage = (xpInCurrentLevel / 100) * 100;
+  // Calculate level (level up every XP_PER_LEVEL XP, starting at level 1)
+  const level = Math.floor(totalXP / XP_PER_LEVEL) + 1;
+  const xpInCurrentLevel = totalXP % XP_PER_LEVEL;
+  const xpNeededForNextLevel = XP_PER_LEVEL - xpInCurrentLevel;
+  const progressPercentage = (xpInCurrentLevel / XP_PER_LEVEL) * 100;
 
   if (status === 'loading' || isLoading) {
     return <AccountPageSkeleton />;
@@ -151,7 +152,7 @@ export default function AccountPage() {
                 >
                   {xpInCurrentLevel > 0 && (
                     <span className="text-xs font-bold text-orange-100">
-                      {xpInCurrentLevel}/100
+                      {xpInCurrentLevel}/{XP_PER_LEVEL}
                     </span>
                   )}
                 </div>

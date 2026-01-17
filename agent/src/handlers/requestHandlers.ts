@@ -154,10 +154,12 @@ async function handleUpdateTask(agent: QuestMasterAgent, params: any): Promise<R
 async function handleDeleteTask(agent: QuestMasterAgent, params: any): Promise<Response> {
     logger.request('POST', '/deleteTask', params);
     const addXP = params.addXP === true;
-    await agent.deleteTask(params.taskId, addXP);
+    const result = await agent.deleteTask(params.taskId, addXP);
     return new Response(
         JSON.stringify({
             success: true,
+            narrative: result.narrative,
+            xpEarned: result.xpEarned,
         }),
         {
             headers: {

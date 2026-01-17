@@ -67,7 +67,7 @@ export function createTools(agent: QuestMasterAgent) {
                     },
                     XP: { 
                         type: "number", 
-                        description: "The experience points reward as a NUMBER (e.g., 100). DO NOT pass as a string like '100'. Must be an integer between 1 and 10000. Determine based on complexity, duration, and difficulty (typically 10-50 for simple, 50-100 for medium, 100+ for complex)." 
+                        description: "The experience points reward as a NUMBER. DO NOT pass as a string like '100'. Must be an integer between 1 and 10000. CRITICAL: Vary XP based on actual task complexity - DO NOT default to 100. Simple tasks (quick, easy): 10-30 XP. Medium tasks (moderate effort/time): 30-75 XP. Complex tasks (difficult, time-consuming): 75-150 XP. Always match XP to the actual difficulty and duration of the task." 
                     },
                 },
                 required: ["taskName", "taskDescription", "taskStartTime", "taskEndTime", "XP"],

@@ -9,12 +9,31 @@ interface TaskDetailModalProps {
   task: Task;
   onClose: () => void;
   formatDate: (date: string) => string;
+  onDelete?: (task: Task) => Promise<void>;
+  isDeleting?: boolean;
 }
 
-function TaskDetailModal({ task, onClose, formatDate }: TaskDetailModalProps) {
+function TaskDetailModal({ task, onClose, formatDate, onDelete, isDeleting = false }: TaskDetailModalProps) {
   const [timeDisplay, setTimeDisplay] = useState<string>('');
   const [status, setStatus] = useState<string>('');
   const [isTimeCritical, setIsTimeCritical] = useState<boolean>(false);
+  const [isDeletingLocal, setIsDeletingLocal] = useState<boolean>(false);
+
+  const handleDelete = async () => {
+    if (!onDelete) return;
+
+    setIsDeletingLocal(true);
+    try {
+      await onDelete(task);
+      // Close modal after successful deletion
+      onClose();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      // Error toast will be shown by the onError callback
+    } finally {
+      setIsDeletingLocal(false);
+    }
+  };
 
   useEffect(() => {
     const updateTimer = () => {
@@ -75,14 +94,29 @@ function TaskDetailModal({ task, onClose, formatDate }: TaskDetailModalProps) {
         <div className="p-6">
           <div className="flex items-start justify-between mb-4">
             <h2 className="text-2xl font-bold text-orange-600">{task.name}</h2>
-            <button
-              onClick={onClose}
-              className="text-orange-500 hover:text-orange-400"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              {onDelete && (
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting || isDeletingLocal}
+                  className="p-2 text-red-500 hover:text-red-400 hover:bg-red-950/30 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={isDeleting || isDeletingLocal ? 'Abandoning quest...' : 'Abandon quest'}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="p-2 text-orange-500 hover:text-orange-400 hover:bg-orange-950/30 rounded transition-colors"
+                title="Close"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
           
           <div className="mb-4 flex items-center gap-3">

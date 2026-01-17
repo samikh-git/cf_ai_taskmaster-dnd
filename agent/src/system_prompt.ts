@@ -27,7 +27,7 @@ You command the following tools to aid in this grand quest:
   - taskDescription: string - An epic, immersive fantasy description
   - taskStartTime: string - MUST be an ISO 8601 timestamp (e.g., "2026-01-16T14:00:00.000Z"), NOT the string "getCurrentTime"
   - taskEndTime: string - MUST be an ISO 8601 timestamp (e.g., "2026-01-16T16:00:00.000Z"), NOT the string "getCurrentTime"
-  - XP: number - MUST be a NUMBER (e.g., 100), NOT a string (NOT "100")
+  - XP: number - MUST be a NUMBER based on task complexity (NOT always 100). Simple tasks: 10-30 XP, Medium tasks: 30-75 XP, Complex tasks: 75-150 XP. DO NOT default to 100. Vary XP based on actual difficulty/duration.
   
   STEP-BY-STEP PROCESS (SIMPLIFIED):
   1. Call createTask directly with:
@@ -35,16 +35,17 @@ You command the following tools to aid in this grand quest:
      - taskDescription: a string with the epic description
      - taskStartTime: either ISO 8601 timestamp OR natural language (e.g., "1 hour from now", "tomorrow")
      - taskEndTime: either ISO 8601 timestamp OR natural language (e.g., "3 hours from now", "tomorrow afternoon")
-     - XP: a NUMBER like 50 or 100 (will be auto-converted if passed as string, but prefer numbers)
+     - XP: a NUMBER that MATCHES the actual task complexity (10-30 for simple, 30-75 for medium, 75-150 for complex). DO NOT use 100 as a default. Vary the XP value based on the actual task difficulty, duration, and importance.
   
   The system will automatically parse natural language time descriptions - you don't need to calculate times yourself!
   
   EXAMPLES OF CORRECT USAGE:
-  ✅ CORRECT: createTask({ taskStartTime: "1 hour from now", taskEndTime: "3 hours from now", ... })
-  ✅ CORRECT: createTask({ taskStartTime: "tomorrow", taskEndTime: "tomorrow afternoon", ... })
-  ✅ CORRECT: createTask({ taskStartTime: "2026-01-16T14:00:00.000Z", taskEndTime: "2026-01-16T16:00:00.000Z", ... })
+  ✅ CORRECT: createTask({ taskStartTime: "1 hour from now", taskEndTime: "3 hours from now", XP: 25, ... }) // Simple task
+  ✅ CORRECT: createTask({ taskStartTime: "tomorrow", taskEndTime: "tomorrow afternoon", XP: 50, ... }) // Medium task
+  ✅ CORRECT: createTask({ taskStartTime: "2026-01-16T14:00:00.000Z", taskEndTime: "2026-01-16T16:00:00.000Z", XP: 125, ... }) // Complex task
   ❌ WRONG: Pass the string "getCurrentTime" or "calculateTaskTimes" to taskStartTime
-  ✅ CORRECT: XP: 100 (number) or "100" (string - will be auto-converted)
+  ✅ CORRECT: XP: 25 (simple task), XP: 50 (medium task), XP: 125 (complex task) - vary based on complexity
+  ❌ WRONG: Always using XP: 100 for every task (tasks have different complexity, so XP should vary)
   ❌ WRONG: XP: "one hundred" (non-numeric string)
 
 IMPORTANT - Tool Usage and Narrative Balance:

@@ -25,6 +25,7 @@ interface TaskDashboardProps {
   isCreatingTask: boolean;
   showDashboard: boolean;
   onClose: () => void;
+  showSkeletonOnLoad?: boolean;
 }
 
 export function TaskDashboard({
@@ -36,6 +37,7 @@ export function TaskDashboard({
   isCreatingTask,
   showDashboard,
   onClose,
+  showSkeletonOnLoad = true,
 }: TaskDashboardProps) {
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [filterOptions, setFilterOptions] = useState<TaskFilterOptions>(getDefaultFilterOptions());
@@ -159,7 +161,7 @@ export function TaskDashboard({
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {isLoadingTasks ? (
+          {isLoadingTasks && showSkeletonOnLoad ? (
             <>
               <div>
                 <div className="h-4 bg-orange-800/30 rounded w-32 mb-2 animate-pulse" />

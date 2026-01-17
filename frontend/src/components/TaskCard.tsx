@@ -52,9 +52,8 @@ export const TaskCard = memo(function TaskCard({ task, status, formatDate, onCli
     };
 
     updateTimer();
-    // Update timer every 5 seconds instead of every 1 second for better performance
-    // Still responsive enough for user experience, but reduces CPU usage significantly
-    const interval = setInterval(updateTimer, 5000);
+    // Update timer every second for accurate countdown
+    const interval = setInterval(updateTimer, 1000);
 
     return () => clearInterval(interval);
   }, [task.startTime, task.endTime, status]);

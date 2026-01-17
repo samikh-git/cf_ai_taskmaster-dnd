@@ -10,6 +10,7 @@ import { formatDate } from '@/utils/time';
 import { TaskDashboard } from '@/components/TaskDashboard';
 import { ExpirationAlertModal } from '@/components/ExpirationAlertModal';
 import { LevelUpModal } from '@/components/LevelUpModal';
+import { CompletionModal } from '@/components/CompletionModal';
 import { MessageSkeleton, PageSkeleton, MainPageSkeleton } from '@/components/Skeletons';
 
 // Lazy load modals for better initial page load performance
@@ -17,6 +18,7 @@ const TaskDetailModal = lazy(() => import('@/components/TaskDetailModal'));
 import { useTasks } from '@/hooks/useTasks';
 import { useChat } from '@/hooks/useChat';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useToast } from '@/contexts/ToastContext';
 import { extendTask, finishTask, abandonTask, createTask } from '@/utils/taskOperations';
 
 export default function Home() {
@@ -25,9 +27,11 @@ export default function Home() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [levelUpAlert, setLevelUpAlert] = useState<number | null>(null);
+  const [completionNarrative, setCompletionNarrative] = useState<{ narrative: string; xpEarned: number } | null>(null);
   const previousLevelRef = useRef<number | null>(null);
   const isInitialLoadRef = useRef(true);
   const hasProcessedInitialLoadRef = useRef(false);
+  const hasLoadedTasksOnceRef = useRef(false);
 
   const {
     tasks,
@@ -68,7 +72,19 @@ export default function Home() {
     onOptimisticTasks: handleOptimisticTasks,
   });
 
-  const { notificationPermission, requestPermission } = useNotifications(session, safeTasks);
+  const { showToast } = useToast();
+  const { notificationPermission, requestPermission } = useNotifications(
+    session, 
+    safeTasks,
+    (message) => showToast(message, 'warning')
+  );
+
+  // Track when tasks have been loaded at least once
+  useEffect(() => {
+    if (!isLoadingTasks && (tasks.length > 0 || totalXP !== undefined)) {
+      hasLoadedTasksOnceRef.current = true;
+    }
+  }, [isLoadingTasks, tasks.length, totalXP]);
 
   useEffect(() => {
     // Skip if still loading tasks (wait for initial data to load)
@@ -117,7 +133,7 @@ export default function Home() {
     await sendChatMessage(input, userTimezoneRef.current || null, fetchTasks);
   };
 
-  const handleExtendTask = async (task: Task) => {
+  const handleExtendTask = useCallback(async (task: Task) => {
     // Save previous state for rollback
     const previousTasks = [...tasks];
 
@@ -130,16 +146,16 @@ export default function Home() {
       onRollback: () => {
         rollbackTasks(previousTasks);
       },
+      onError: (message) => showToast(message, 'error'),
     });
 
     if (success) {
       // Sync with server after successful API call
       await fetchTasks();
     }
-    return success;
-  };
+  }, [tasks, optimisticallyUpdateTask, setProcessedExpiredTasks, rollbackTasks, fetchTasks, showToast]);
 
-  const handleFinishTask = async (task: Task) => {
+  const handleFinishTask = useCallback(async (task: Task) => {
     // Save previous state for rollback
     const previousTasks = [...tasks];
     const previousXP = totalXP;
@@ -159,18 +175,25 @@ export default function Home() {
       onRollbackXP: () => {
         rollbackXP(previousXP);
       },
+      onError: (message) => showToast(message, 'error'),
+      onNarrative: (narrative, xpEarned) => {
+        setCompletionNarrative({
+          narrative,
+          xpEarned,
+        });
+      },
     });
 
     if (success) {
       // Sync with server after successful API call
       await fetchTasks();
     }
-    return success;
-  };
+  }, [tasks, totalXP, optimisticallyDeleteTask, setProcessedExpiredTasks, optimisticallyUpdateXP, rollbackTasks, rollbackXP, fetchTasks, showToast]);
 
-  const handleAbandonTask = async (task: Task) => {
+  const handleAbandonTask = useCallback(async (task: Task) => {
     // Save previous state for rollback
     const previousTasks = [...tasks];
+    const previousXP = totalXP;
 
     const success = await abandonTask(task, userTimezoneRef.current, {
       onOptimisticDelete: () => {
@@ -178,19 +201,25 @@ export default function Home() {
         setProcessedExpiredTasks(prev => new Set(prev).add(task.id));
         setExpiredTaskAlert(null);
       },
+      onOptimisticXP: (xpDelta) => {
+        optimisticallyUpdateXP(xpDelta);
+      },
       onRollback: () => {
         rollbackTasks(previousTasks);
       },
+      onRollbackXP: () => {
+        rollbackXP(previousXP);
+      },
+      onError: (message) => showToast(message, 'error'),
     });
 
     if (success) {
       // Sync with server after successful API call
       await fetchTasks();
     }
-    return success;
-  };
+  }, [tasks, totalXP, optimisticallyDeleteTask, setProcessedExpiredTasks, optimisticallyUpdateXP, rollbackTasks, rollbackXP, fetchTasks, showToast]);
 
-  const handleCreateTask = async (taskData: {
+  const handleCreateTask = useCallback(async (taskData: {
     taskName: string;
     taskDescription: string;
     taskStartTime: string;
@@ -209,6 +238,7 @@ export default function Home() {
         onRollback: () => {
           rollbackTasks(previousTasks);
         },
+        onError: (message) => showToast(message, 'error'),
       });
 
       if (success) {
@@ -219,9 +249,9 @@ export default function Home() {
     } finally {
       setIsCreatingTask(false);
     }
-  };
+  }, [tasks, optimisticallyAddTask, rollbackTasks, fetchTasks, showToast]);
 
-  const handleDismissExpiredTask = async (task: Task) => {
+  const handleDismissExpiredTask = useCallback(async (task: Task) => {
     const taskId = task.id;
     setProcessedExpiredTasks(prev => new Set(prev).add(taskId));
     setExpiredTaskAlert(null);
@@ -237,14 +267,16 @@ export default function Home() {
         onRollback: () => {
           rollbackTasks(previousTasks);
         },
+        onError: (message) => showToast(message, 'error'),
       });
 
       // Sync with server after successful API call
       await fetchTasks();
     } catch (error) {
       console.error('Error deleting dismissed task:', error);
+      showToast(`Failed to dismiss task: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
-  };
+  }, [tasks, setProcessedExpiredTasks, optimisticallyDeleteTask, rollbackTasks, fetchTasks, showToast]);
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -302,8 +334,9 @@ export default function Home() {
     );
   }
 
-  // Show full page skeleton on initial load when tasks are loading and no data exists
-  if (isLoadingTasks && tasks.length === 0 && totalXP === undefined) {
+  // Show full page skeleton only on first load when tasks are loading and no data exists
+  const isFirstLoad = isLoadingTasks && !hasLoadedTasksOnceRef.current;
+  if (isFirstLoad && tasks.length === 0 && totalXP === undefined) {
     return <MainPageSkeleton />;
   }
 
@@ -318,6 +351,7 @@ export default function Home() {
         isCreatingTask={isCreatingTask}
         showDashboard={showDashboard}
         onClose={() => setShowDashboard(false)}
+        showSkeletonOnLoad={isFirstLoad}
       />
 
       <div className="flex-1 flex flex-col bg-gray-950 h-full">
@@ -401,8 +435,8 @@ export default function Home() {
           {/* Show skeleton when chat is loading (initial or during message send) */}
           {isLoading && messages.length === 0 && <MessageSkeleton />}
           
-          {/* Show skeleton during initial tasks load even if we have messages */}
-          {isLoadingTasks && tasks.length === 0 && messages.length === 0 && (
+          {/* Show skeleton during initial tasks load even if we have messages (first load only) */}
+          {isFirstLoad && tasks.length === 0 && messages.length === 0 && (
             <MessageSkeleton />
           )}
           
@@ -515,6 +549,7 @@ export default function Home() {
             task={selectedTask}
             onClose={() => setSelectedTask(null)}
             formatDate={formatDate}
+            onDelete={handleAbandonTask}
           />
         </Suspense>
       )}
@@ -533,6 +568,14 @@ export default function Home() {
         <LevelUpModal
           newLevel={levelUpAlert}
           onClose={() => setLevelUpAlert(null)}
+        />
+      )}
+
+      {completionNarrative && (
+        <CompletionModal
+          narrative={completionNarrative.narrative}
+          xpEarned={completionNarrative.xpEarned}
+          onClose={() => setCompletionNarrative(null)}
         />
       )}
     </div>
