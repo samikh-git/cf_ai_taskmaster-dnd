@@ -21,7 +21,9 @@ Try the application online: **[https://www.questmaster.work/](https://www.questm
   - **Search & Filter**: Search tasks by name/description, filter by status (all/active/upcoming/expired) and date (all/today/this week/this month/future/past)
   - **Expandable Search**: Quick-access search icon that expands when clicked
 - **Experience Points (XP) & Leveling**: Each task is assigned XP based on complexity. Level up every 100 XP
-- **Streak System**: Maintain daily completion streaks with grace days (1 per week)
+- **Streak System**: Maintain daily completion streaks with grace days (1 per week). 7+ day streaks earn 10% XP bonus
+- **Completion Narratives**: AI-generated epic stories chronicling your quest completions, building a coherent narrative across your journey
+- **Quest Penalties**: Abandoning a quest costs 50% of its XP as a penalty
 - **Streaming Responses**: Real-time streaming chat interface for natural conversations
 - **Optimistic Updates**: UI updates immediately before API confirmation for instant feedback
 - **Skeleton Loading States**: Beautiful loading skeletons for all pages and operations
@@ -171,8 +173,10 @@ Generate `NEXTAUTH_SECRET` with: `openssl rand -base64 32`
 3. **Create Quests**: Ask the DM to create tasks - they'll be transformed into epic quests
 4. **View Quest Log**: Use the sidebar dashboard to see all your tasks
 5. **Track Progress**: View XP, level, and streaks on the account page
-6. **Complete Quests**: Finish tasks to earn XP and maintain streaks
-7. **View History**: Check your quest history and statistics
+6. **Complete Quests**: Finish tasks to earn XP and maintain streaks. Each completion generates an epic narrative story!
+7. **Read Your Story**: Completion narratives build on each other, creating a coherent epic journey across all your quests
+8. **View History**: Check your quest history and statistics
+9. **Quest Penalties**: Abandoning a quest costs 50% of its XP - choose wisely!
 
 ### Example Interaction
 
@@ -303,6 +307,12 @@ Comprehensive documentation is available in the `docs/` directory:
 - **Retry Logic**: Automatic retry with improved error messages for failed task creation
 - **Enhanced Error Messages**: Detailed guidance for the AI model to correct parameters
 - **Simplified Tool Workflow**: Reduced tool chaining for better reliability
+
+### Quest Completion & Narratives
+- **Completion Stories**: AI-generated epic narratives that gamify task completion, showing what happened during the quest
+- **Coherent Storytelling**: Narratives build on previous completion stories to create an ongoing epic journey
+- **Completion Modal**: Beautiful modal displays completion narrative with XP earned (including streak bonuses)
+- **Quest Penalties**: Abandoning quests now decreases total XP by 50% of the quest's XP value
 
 ### Security & Validation
 - **Input Validation**: Comprehensive server-side validation

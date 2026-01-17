@@ -226,7 +226,7 @@ export default function AboutPage() {
               <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-4">
                 <h4 className="font-semibold text-orange-500 mb-2">Streak System</h4>
                 <p className="text-sm text-orange-200/90">
-                  Maintain daily completion streaks with grace days (1 per week). Earn bonus XP for 7+ day streaks.
+                  Maintain daily completion streaks with grace days (1 per week). Earn 10% bonus XP for maintaining 7+ day streaks.
                 </p>
               </div>
 
@@ -274,6 +274,63 @@ export default function AboutPage() {
             </div>
           </section>
 
+          {/* Streak System */}
+          <section className="space-y-6">
+            <h2 className="text-3xl font-bold text-orange-600 border-b border-orange-900/50 pb-2">
+              The Streak System
+            </h2>
+            
+            <div className="bg-gray-950/50 border border-orange-900/30 rounded-lg p-6 space-y-4">
+              <div className="space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">How Streaks Work</h3>
+                <p className="text-orange-200/90 leading-relaxed">
+                  Maintain your momentum by completing at least one quest every day. Your streak increases 
+                  each consecutive day you complete a quest, building your dedication and earning you 
+                  greater rewards. The longer your streak, the more impressive your achievement!
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">Grace Days</h3>
+                <p className="text-orange-200/90 leading-relaxed">
+                  Life happens! That&apos;s why you get <strong className="text-orange-400">1 grace day per week</strong>. 
+                  If you miss a day, you can use a grace day to maintain your streak. Grace days reset every 
+                  Monday, giving you a fresh start each week. Use them wisely - they&apos;re your safety net 
+                  when unexpected challenges arise.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">Streak Bonuses</h3>
+                <p className="text-orange-200/90 leading-relaxed">
+                  Once you reach a <strong className="text-orange-400">7-day streak</strong>, you unlock a powerful bonus: 
+                  <strong className="text-orange-400"> +10% XP on all quest completions</strong>! This bonus applies to 
+                  every quest you complete while maintaining your 7+ day streak. The longer you maintain your streak, 
+                  the more XP you&apos;ll earn, making your dedication truly rewarding.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-xl font-semibold text-orange-500">Streak Calculation</h3>
+                <ul className="text-orange-200/90 leading-relaxed space-y-2 list-disc list-inside">
+                  <li><strong className="text-orange-400">Consecutive Days:</strong> Complete a quest on consecutive days to build your streak</li>
+                  <li><strong className="text-orange-400">Same Day Completions:</strong> Multiple quests completed on the same day count as one day</li>
+                  <li><strong className="text-orange-400">Grace Day Usage:</strong> Missing one day can be covered by a grace day (1 per week)</li>
+                  <li><strong className="text-orange-400">Streak Reset:</strong> Missing more than one day (or missing a day without a grace day) resets your streak to 1</li>
+                  <li><strong className="text-orange-400">Longest Streak:</strong> Your best streak is tracked separately and never decreases</li>
+                </ul>
+              </div>
+
+              <div className="bg-orange-950/30 border border-orange-800/50 rounded-lg p-4 mt-4">
+                <p className="text-orange-200/90 leading-relaxed">
+                  <strong className="text-orange-400">Pro Tip:</strong> Consistency is key! Even completing one small quest each day 
+                  will maintain your streak and unlock those valuable 10% XP bonuses. Build the habit, and watch 
+                  your progress accelerate!
+                </p>
+              </div>
+            </div>
+          </section>
+
           {/* Account & Progress */}
           <section className="space-y-6">
             <h2 className="text-3xl font-bold text-orange-600 border-b border-orange-900/50 pb-2">
@@ -285,8 +342,8 @@ export default function AboutPage() {
                 <h3 className="text-xl font-semibold text-orange-500">Account Page</h3>
                 <p className="text-orange-200/90 leading-relaxed">
                   View your current level, XP progress, and completion streaks. Track your longest streak 
-                  and see how close you are to the next level. Earn bonus XP (10% extra) when you maintain 
-                  a 7+ day completion streak!
+                  and see how close you are to the next level. Monitor your current streak and grace days 
+                  remaining to plan your quest completions strategically.
                 </p>
               </div>
 

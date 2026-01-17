@@ -256,23 +256,44 @@ Authorization: Bearer {token}
 }
 ```
 
-#### Delete Task
+#### Delete Task (Complete or Abandon)
 
 ```json
 {
   "tool": "deleteTask",
   "params": {
-    "taskId": "uuid"
+    "taskId": "uuid",
+    "addXP": true  // true = complete quest (earn XP), false = abandon (lose 50% XP)
   }
 }
 ```
 
-**Response:**
+**Response (when completing):**
+```json
+{
+  "success": true,
+  "narrative": "The brave adventurer ventured into the depths...",
+  "xpEarned": 55  // Base XP + streak bonus (if applicable)
+}
+```
+
+**Response (when abandoning):**
 ```json
 {
   "success": true
 }
 ```
+
+**Note**: When `addXP: true`, the quest is completed and:
+- XP is added to total (base XP + 10% streak bonus if streak >= 7 days)
+- A completion narrative is generated using AI
+- The narrative builds on previous completion stories for coherence
+- Quest is moved to completed quests history
+
+When `addXP: false`, the quest is abandoned and:
+- 50% of the quest's XP is deducted from total XP (minimum 0)
+- No narrative is generated
+- Quest is removed without being added to history
 
 **Status Codes:**
 - `200`: Success
@@ -306,8 +327,11 @@ interface CompletedQuest {
   id: string;
   name: string;
   description: string;
-  completedAt: Date;            // ISO 8601 timestamp
+  startTime: Date;              // ISO 8601 timestamp
+  endTime: Date;                // ISO 8601 timestamp
+  completionDate: Date;          // ISO 8601 timestamp
   XP: number;
+  completionNarrative?: string;  // AI-generated completion story
 }
 ```
 

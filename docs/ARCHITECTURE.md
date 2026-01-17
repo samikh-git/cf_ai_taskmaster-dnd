@@ -164,7 +164,7 @@ The `QuestMasterAgent` Durable Object maintains persistent state:
 ```typescript
 interface DMState {
   tasks: Task[];                    // Active tasks
-  completedQuests: CompletedQuest[]; // Completed tasks
+  completedQuests: CompletedQuest[]; // Completed tasks (includes completionNarrative)
   timezone?: string;                // User timezone
   totalXP: number;                  // Total experience points
   currentStreak: number;            // Current daily streak
@@ -218,9 +218,10 @@ The frontend uses React state management:
 ## AI Integration
 
 ### Model
-- **Model**: `@cf/meta/llama-3.1-70b-instruct`
+- **Chat/Tool Calling**: `@cf/meta/llama-3.1-70b-instruct`
+- **Narrative Generation**: `@cf/meta/llama-3.1-8b-instruct` (via `this.env.AI.run()`)
 - **Provider**: Cloudflare Workers AI
-- **Capabilities**: Text generation, tool calling
+- **Capabilities**: Text generation, tool calling, narrative generation
 
 ### Tools Available to AI
 
@@ -228,6 +229,16 @@ The frontend uses React state management:
 2. **createTask**: Create a new task/quest
 3. **viewTasks**: View all active tasks
 4. **calculateTaskTimes**: Calculate task times from descriptions
+
+### AI Narrative Generation
+
+When a quest is completed, the system generates an epic completion narrative:
+
+- **Model**: Uses `@cf/meta/llama-3.1-8b-instruct` via `this.env.AI.run()`
+- **Context**: Includes last 5 completed quest narratives for story coherence
+- **Style**: Epic, Tolkien-esque fantasy prose that gamifies the completion
+- **Storage**: Narratives are stored in `CompletedQuest.completionNarrative`
+- **Display**: Shown in completion modal with XP earned (including streak bonuses)
 
 ### Tool Calling Flow
 
@@ -245,10 +256,19 @@ The frontend uses React state management:
 ## Task Lifecycle
 
 ```
-Created → Active → Completed/Expired
+Created → Active → Completed/Expired/Abandoned
    │         │            │
-   │         │            └─→ Moved to completedQuests
-   │         │            └─→ Auto-deleted after expiration
+   │         │            ├─→ Completed (addXP: true)
+   │         │            │   ├─→ Earn XP (base + streak bonus if streak >= 7)
+   │         │            │   ├─→ Generate completion narrative
+   │         │            │   └─→ Moved to completedQuests with narrative
+   │         │            │
+   │         │            ├─→ Abandoned (addXP: false)
+   │         │            │   ├─→ Lose 50% of quest XP (minimum 0)
+   │         │            │   └─→ Removed (not added to history)
+   │         │            │
+   │         │            └─→ Expired
+   │         │                └─→ Auto-deleted after expiration
    │         │
    │         └─→ Between startTime and endTime
    │
