@@ -1,0 +1,49 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"ai": {
+		"binding": "AI"
+	},
+	"name": "agent",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-09-27",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"durable_object_alarms"
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "QuestMasterAgent",
+				"name": "QuestMasterAgent"
+			}
+		]
+	},
+	"migrations": [],
+	"ratelimits": [
+		{
+			"name": "CHAT_RATE_LIMITER",
+			"namespace_id": "1001",
+			"simple": {
+				"limit": 30,
+				"period": 60
+			}
+		},
+		{
+			"name": "TASK_RATE_LIMITER",
+			"namespace_id": "1002",
+			"simple": {
+				"limit": 60,
+				"period": 60
+			}
+		}
+	],
+	"observability": {
+		"enabled": true
+	},
+	"vars": {
+		"AGENT_URL": "https://agent.sami-houssaini.workers.dev",
+		"AUTH_URL": "https://frontend.sami-houssaini.workers.dev/",
+		"GITHUB_CLIENT_ID": "Ov23linjiTP9zTeczfEe",
+		"NEXTAUTH_URL": "https://frontend.sami-houssaini.workers.dev/"
+	}
+}
